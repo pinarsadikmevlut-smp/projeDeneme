@@ -19,3 +19,26 @@
 .sales-catalog .sales-no-results {
   font-size: 0.95rem;
 }
+
+/* 0.95rem katalog tipografisini koruyarak dar kartlarda taşmayı önle. */
+.sales-catalog .sales-panel-heading{height:auto;min-height:65px;flex-wrap:wrap;padding:10px 12px}
+.sales-catalog .sales-heading-badges{flex-wrap:wrap}
+.sales-catalog .sales-catalog-search{height:42px}
+.sales-catalog .sales-product{
+ display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px 9px;
+ align-items:center;min-height:92px;padding:10px;
+}
+.sales-catalog .sales-product-icon{grid-column:1;grid-row:1}
+.sales-catalog .sales-product-info{grid-column:2;grid-row:1;min-width:0}
+.sales-catalog .sales-product-info strong{white-space:normal;overflow:visible;overflow-wrap:anywhere;line-height:1.25}
+.sales-catalog .sales-product-info small,.sales-catalog .sales-product-info span{line-height:1.25;overflow-wrap:anywhere}
+.sales-catalog .sales-product-action{
+ grid-column:1/-1;grid-row:2;flex-direction:row;align-items:center;justify-content:space-between;
+ gap:8px;min-width:0;
+}
+.sales-catalog .sales-product-action strong{overflow-wrap:anywhere;white-space:normal}
+.sales-catalog .sales-product-action button{height:30px;width:30px;flex:none}
+.sales-catalog .sales-product-action button:disabled{opacity:.42;cursor:not-allowed}
+.sales-catalog .sales-not-live{color:#a46f12}
+.dark .sales-catalog .sales-not-live{color:#e0b35d}
+@media(max-width:1250px){.sales-catalog .sales-product{grid-template-columns:36px minmax(0,1fr);padding:8px;gap:7px}}

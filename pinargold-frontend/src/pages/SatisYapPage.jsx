@@ -1,5 +1,6 @@
 import {useMemo,useState} from 'react';
 import {useMarketData} from '../hooks/useMarketData';
+import {useMarketStatus} from '../hooks/useMarketStatus';
 import {formatPrice} from '../utils/format';
 import './SatisYapPage.css';
 
@@ -23,6 +24,7 @@ const invoiceNo='SAT-DEMO-0001';
 
 export default function SatisYapPage(){
  const market=useMarketData();
+ const marketStatus=useMarketStatus();
  const [search,setSearch]=useState('');
  const [customerSearch,setCustomerSearch]=useState('');
  const [customer,setCustomer]=useState(null);
@@ -34,13 +36,15 @@ export default function SatisYapPage(){
   const price=market.find(item=>item.id===id);
   return price?{...price,icon:catalogMeta[id][0],label:catalogMeta[id][1],detail:catalogMeta[id][2],sku:catalogMeta[id][3]}:null;
  }).filter(Boolean),[market]);
+ const quoteAvailable=p=>Number.isFinite(p.sell)&&p.sell>0&&!p.stale&&['live','partial'].includes(marketStatus.state);
+ const marketLabel={live:'● Güncel',partial:'● Kısmen güncel',warming:'● Bağlanıyor',stale:'● Veri eski',error:'● Bağlantı hatası',unavailable:'● Kullanılamıyor'}[marketStatus.state]||'● Bekleniyor';
  const filtered=products.filter(p=>[p.label,p.sku,p.detail].join(' ').toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')));
  const lines=cart.map(row=>({...row,product:products.find(p=>p.id===row.id)})).filter(row=>row.product);
  const total=lines.reduce((sum,row)=>sum+row.qty*row.unitPrice,0);
  // Demo totals only: no fiscal or legal tax calculation.
  const add=id=>{
   const product=products.find(p=>p.id===id);
-  if(!product)return;
+  if(!product||!quoteAvailable(product))return;
   setCart(rows=>{
    const exists=rows.find(row=>row.id===id);
    return exists?rows.map(row=>row.id===id?{...row,qty:row.qty+1}:row):[...rows,{id,qty:1,unitPrice:product.sell}];
@@ -49,21 +53,21 @@ export default function SatisYapPage(){
  const changeQty=(id,qty)=>setCart(rows=>rows.map(row=>row.id===id?{...row,qty:Math.max(0,Math.min(999,Number(qty)||0))}:row).filter(row=>row.qty>0));
  const reset=()=>{setCart([]);setCustomer(null);setCustomerSearch('');setPayment('Nakit');setMessage('Demo sepeti temizlendi.');};
  return <div className="sales-page">
-  <div className="sales-demo-note" role="note">SATIŞ TASARIM ÖNİZLEMESİ · Simülasyon fiyatları kullanılır. Resmi fatura veya ödeme oluşturulmaz.</div>
+  <div className="sales-demo-note" role="note">SATIŞ TASARIM ÖNİZLEMESİ · Altınkaynak fiyatları bilgilendirme amaçlıdır; eski fiyatlar sepete eklenmez. Resmî ödeme veya fatura oluşturulmaz.</div>
   <div className="sales-workspace">
    <aside className="sales-panel sales-catalog" aria-label="Ürün kataloğu">
     <div className="sales-panel-heading">
      <div><span className="sales-eyebrow">CANLI KATALOG</span><h1>Ürünler</h1></div>
-     <div className="sales-heading-badges"><span className="sales-live">● Canlı</span><span className="sales-gold-tag">{products.length} ürün</span></div>
+     <div className="sales-heading-badges"><span role="status" className={`sales-live ${marketStatus.state==='live'?'':'sales-not-live'}`}>{marketLabel}</span><span className="sales-gold-tag">{products.length} ürün</span></div>
     </div>
     <div className="sales-catalog-search"><span aria-hidden="true">⌕</span><input aria-label="Ürün ara" placeholder="Ürün adı veya kod ara..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
     <div className="sales-product-list">
      {filtered.map(p=><article className="sales-product" key={p.id}>
       <div className="sales-product-icon" aria-hidden="true">{p.icon}</div>
       <div className="sales-product-info"><strong>{p.label}</strong><small>{p.detail}</small><span>{p.sku}</span></div>
-      <div className="sales-product-action"><strong>{money(p.sell)}</strong><button type="button" aria-label={p.label+' sepete ekle'} onClick={()=>add(p.id)}>＋</button></div>
+      <div className="sales-product-action"><strong>{money(p.sell)}</strong><button type="button" disabled={!quoteAvailable(p)} title={quoteAvailable(p)?'Demo sepete ekle':'Güncel fiyat bekleniyor: sepete eklenemez'} aria-label={p.label+' sepete ekle'} onClick={()=>add(p.id)}>＋</button></div>
      </article>)}
-     {!filtered.length&&<p className="sales-no-results">Aramanıza uygun ürün bulunamadı.</p>}
+     {!filtered.length&&<p className="sales-no-results">{products.length?'Aramanıza uygun ürün bulunamadı.':'Fiyatlar bekleniyor. Backend bağlantısını kontrol edin.'}</p>}
     </div>
    </aside>
    <section className="sales-panel sales-basket" aria-label="Satış sepeti">
