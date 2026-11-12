@@ -67,35 +67,18 @@ export default function MusterilerPage(){
   finally{setSaving(false);}
  };
  if(authLoading)return <div className="customers-page"><p className="customers-help">Oturum kontrol ediliyor...</p></div>;
- if(!authenticated)return <div className="customers-page">
-   <div className="customers-login-layout">
-    <div className="customers-intro">
-     <span className="customers-eyebrow">PINARGOLD · KALICI KAYITLAR</span>
-     <h1>Müşteri Listesi</h1>
-     <p>Ziraat Bankası Excel hareketlerinden aktarılan müşterileri güvenli biçimde yönetin. Müşteriler mevcut PostgreSQL veritabanında tutulur.</p>
-     <div className="customers-privacy">TCKN içeren müşteri kayıtları yalnızca yetkili yönetici oturumunda görüntülenir. Excel sayfasındaki veriler oturum açmadan veritabanına yazılmaz.</div>
-    </div>
-    <form className="customers-login-card" onSubmit={onLogin}>
-     <div className="customers-card-title">Müşteri yönetimi girişi</div>
-     <label>Kullanıcı adı<input required autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)} placeholder="Yönetici kullanıcı adı"/></label>
-     <label>Parola<input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Yönetici parolası"/></label>
-     {loginError&&<p role="alert" className="customers-error">{loginError}</p>}
-     <button className="customers-primary" type="submit" disabled={loginBusy}>{loginBusy?'Giriş yapılıyor...':'Giriş Yap'}</button>
-     <p className="customers-help">Hesap bilgileri sunucunun <code>.env</code> ayarlarından tanımlanır. Tarayıcıda parola saklanmaz.</p>
-    </form>
-   </div>
-  </div>;
  return <div className="customers-page">
   <div className="customers-heading">
    <div><span className="customers-eyebrow">PINARGOLD · MÜŞTERİ YÖNETİMİ</span>
     <h1>Müşteri Listesi</h1>
     <p>Excel’den aktarılan ve elle oluşturulan kayıtlar PostgreSQL’de kalıcı tutulur.</p></div>
    <div className="customers-heading-actions">
-    <span className="customers-user">● {user?.username||'Yetkili'}</span>
-    <button className="customers-secondary" onClick={()=>{logout().catch(()=>{});}}>Çıkış</button>
-    <button className="customers-primary" onClick={openCreate}>+ Yeni Müşteri</button>
+    {authenticated&&<span className="customers-user">● {user?.username||'Yetkili'}</span>}
+    {authenticated&&<button className="customers-secondary" onClick={()=>{logout().catch(()=>{});}}>Çıkış</button>}
+    <button className="customers-primary" disabled={!authenticated} title={!authenticated?'Veritabanı için yetkili oturum gerekli':undefined} onClick={openCreate}>+ Yeni Müşteri</button>
    </div>
   </div>
+  {!authenticated&&<div className="customers-privacy" role="status">Müşteri Listesi artık doğrudan açılıyor. Ancak gerçek Ad Soyad ve TCKN kayıtlarına erişim, güvenli kullanıcı yönetimi bağlanana kadar kapalıdır. Şimdilik veritabanında müşteri görüntüleme, ekleme ve güncelleme işlemleri kullanılamaz.</div>}
   <div className="customers-stats"><div><span>TOPLAM MÜŞTERİ</span><strong>{total}</strong></div><div><span>SAYFADAKİ KAYITLAR</span><strong>{rows.length}</strong></div><div><span>VERİTABANI</span><strong>PostgreSQL</strong></div></div>
   <section className="customers-table-panel">
    <div className="customers-toolbar"><div><strong>Kaydedilen müşteriler</strong><span>TCKN aynıysa tekrar kayıt açılmaz; mevcut kayıt elle güncellenebilir.</span></div><label className="customers-search"><span>⌕</span><input aria-label="Müşteri ara" value={search} onChange={e=>{setPage(1);setSearch(e.target.value)}} placeholder="Ad soyad veya TCKN ara..."/></label></div>
@@ -103,11 +86,11 @@ export default function MusterilerPage(){
    {error&&!edit&&<p className="customers-error" role="alert">{error}</p>}
    <div className="customers-table-scroll">
     <table><thead><tr><th>AD SOYAD</th><th>TCKN</th><th>KAYNAK</th><th>SON GÜNCELLEME</th><th>İŞLEM</th></tr></thead>
-    <tbody>{rows.map(row=><tr key={row.id}><td><strong>{row.fullName}</strong></td><td className="customers-tckn">{row.tckn}</td><td><span className="customers-source">{row.source==='ziraat_excel'?'Ziraat Excel':'Elle giriş'}</span></td><td>{displayTime(row.updatedAt)}</td><td><button className="customers-edit" type="button" aria-label={row.fullName+' düzenle'} onClick={()=>openEdit(row)}>Düzenle</button></td></tr>)}</tbody></table>
-    {!rows.length&&!loading&&<div className="customers-empty">Henüz kayıt bulunmuyor. Excel Yükle ekranından dosya yükleyebilir veya yeni müşteri ekleyebilirsiniz.</div>}
+    <tbody>{rows.map(row=><tr key={row.id}><td><strong>{row.fullName}</strong></td><td className="customers-tckn">{row.tckn}</td><td><span className="customers-source">{row.source==='ziraat_excel'?'Ziraat Excel':'Elle giriş'}</span></td><td>{displayTime(row.updatedAt)}</td><td><button disabled={!authenticated} className="customers-edit" type="button" aria-label={row.fullName+' düzenle'} onClick={()=>openEdit(row)}>Düzenle</button></td></tr>)}</tbody></table>
+    {!rows.length&&!loading&&<div className="customers-empty">{authenticated?'Henüz kayıt bulunmuyor. Excel Yükle ekranından dosya yükleyebilir veya yeni müşteri ekleyebilirsiniz.':'Müşteri verileri güvenli kullanıcı yönetimi etkinleşince listelenecek.'}</div>}
     {loading&&<p className="customers-help customers-loading">Müşteriler yükleniyor...</p>}
    </div>
-   <footer className="customers-pagination"><span>{total} kayıt · Sayfa {page} / {Math.max(1,Math.ceil(total/perPage))}</span><div><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>Önceki</button><button disabled={page>=Math.ceil(total/perPage)} onClick={()=>setPage(p=>p+1)}>Sonraki</button></div></footer>
+   <footer className="customers-pagination"><span>{authenticated?total:'—'} kayıt · Sayfa {page} / {Math.max(1,Math.ceil(total/perPage))}</span><div><button disabled={!authenticated||page===1} onClick={()=>setPage(p=>p-1)}>Önceki</button><button disabled={!authenticated||page>=Math.ceil(total/perPage)} onClick={()=>setPage(p=>p+1)}>Sonraki</button></div></footer>
   </section>
   {edit&&<div className="customers-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setEdit(null)}}>
    <form className="customers-modal" role="dialog" aria-modal="true" aria-label={edit==='new'?'Yeni müşteri ekle':'Müşteri güncelle'} onSubmit={save}>

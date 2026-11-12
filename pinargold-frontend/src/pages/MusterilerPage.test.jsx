@@ -39,10 +39,12 @@ describe('Müşteri Listesi',()=>{
    body:{fullName:'Ayşe Kaya',tckn:'10000000146'}
   }));
  });
- it('does not expose customer data to an anonymous viewer',()=>{
+ it('opens direct customer list without a login form or exposing private records',()=>{
   auth.authenticated=false;
   render(<MusterilerPage/>);
-  expect(screen.getByText('Müşteri yönetimi girişi')).toBeTruthy();
-  expect(screen.queryByRole('table')).toBeNull();
+  expect(screen.getByText('Müşteri Listesi')).toBeTruthy();
+  expect(screen.getByRole('table')).toBeTruthy();
+  expect(screen.queryByText('Müşteri yönetimi girişi')).toBeNull();
+  expect(screen.getByRole('button',{name:'+JSON.stringify('+ Yeni Müşteri')+'}).disabled).toBe(true);
  });
 });
