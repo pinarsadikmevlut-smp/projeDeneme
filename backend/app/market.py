@@ -14,7 +14,6 @@ _cache = {"fetched_at": 0, "data": None, "error": None}
 # Explicit source codes avoid confusing retail and wholesale products.
 PRODUCTS = (
     ("gram", "Gram Altın 24k", "Has & Külçe", "24k / 1.000", "gold", "PGA"),
-    ("has995", "Has Altın 0.995", "Has & Külçe", "0.995", "gold", "CH_T"),
     ("has1000", "Has Altın 1.000", "Has & Külçe", "1.000", "gold", "HH_T"),
     ("ceyrek", "Çeyrek Altın", "Ziynet & Ata", "22k", "gold", "C"),
     ("yarim", "Yarım Altın", "Ziynet & Ata", "22k", "gold", "Y"),
@@ -74,9 +73,21 @@ def get_market_data(fetcher=fetch_json, now=time.monotonic):
             return {**_cache["data"], "cached": True}
         try:
             quotes = normalize(fetcher(GOLD_URL), fetcher(CURRENCY_URL))
+            source_times = []
+            for quote in quotes:
+                raw_time = quote.get("sourceUpdatedAt")
+                if raw_time:
+                    try:
+                        source_times.append(datetime.strptime(raw_time, "%d.%m.%Y %H:%M:%S").replace(tzinfo=timezone.utc))
+                    except ValueError:
+                        pass
+            # Provider timestamps are Turkey-local; compare in UTC (+03:00).
+            from datetime import timedelta
+            newest = max(source_times) - timedelta(hours=3) if source_times else None
+            source_stale = newest is None or (datetime.now(timezone.utc) - newest).total_seconds() > 300
             payload = {"source": "Altınkaynak", "mode": "live", "quotes": quotes,
                        "fetchedAt": datetime.now(timezone.utc).isoformat(),
-                       "intervalSeconds": CACHE_SECONDS, "stale": False}
+                       "intervalSeconds": CACHE_SECONDS, "stale": source_stale}
             _cache.update(fetched_at=now(), data=payload, error=None)
             return {**payload, "cached": False}
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:

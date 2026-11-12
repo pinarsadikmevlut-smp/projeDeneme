@@ -25,7 +25,7 @@ def test_cache_10_seconds():
         return [{"Kod": "USD", "Alis": "50,212", "Satis": "50,407"}]
     first = get_market_data(fetcher=fetch, now=lambda: 100)
     second = get_market_data(fetcher=fetch, now=lambda: 105)
-    assert first["stale"] is False
+    assert first["mode"] == "live"
     assert second["cached"] is True
     assert len(calls) == 2
     third = get_market_data(fetcher=fetch, now=lambda: 111)
