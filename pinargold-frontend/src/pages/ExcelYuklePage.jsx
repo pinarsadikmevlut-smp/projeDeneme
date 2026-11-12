@@ -1,4 +1,7 @@
 import {useMemo,useRef,useState} from 'react';
+import {Link} from 'react-router-dom';
+import {useAuth} from '../context/AuthContext';
+import {apiRequest} from '../services/apiClient';
 import {loadZiraatFile,STANDARD_COLUMNS,enrichedCsv,validTckn,splitFullName} from '../services/ziraatStatement.service';
 import './ExcelYuklePage.css';
 
@@ -7,6 +10,9 @@ const normalize=value=>String(value??'').trim().toLocaleLowerCase('tr-TR').repla
 
 export default function ExcelYuklePage(){
  const fileRef=useRef(null);
+ const {authenticated,csrfToken}=useAuth();
+ const [syncStatus,setSyncStatus]=useState('');
+ const [syncBusy,setSyncBusy]=useState(false);
  const [records,setRecords]=useState([]);
  const [extraHeaders,setExtraHeaders]=useState([]);
  const [showExtras,setShowExtras]=useState(true);
@@ -27,11 +33,41 @@ export default function ExcelYuklePage(){
  const current=Math.min(page,pages);
  const shown=visible.slice((current-1)*perPage,current*perPage);
  const allSelected=shown.length>0&&shown.every(r=>selected.includes(r.id));
+ async function saveCustomersToDatabase(sourceRows){
+  if(!authenticated||!csrfToken){
+   setSyncStatus('Kalıcı kayıt için Müşteri Listesi menüsünden yetkili girişi yapın. Ardından dosyayı yeniden yükleyin.');
+   return;
+  }
+  const candidates=sourceRows.filter(r=>r.fullName?.trim()&&validTckn(r.tckn))
+   .map(r=>({fullName:r.fullName.trim(),tckn:r.tckn}));
+  const excluded=sourceRows.length-candidates.length;
+  if(!candidates.length){
+   setSyncStatus('Geçerli Ad Soyad ve TCKN çifti bulunamadı. Bilgileri kontrol edin.');
+   return;
+  }
+  setSyncBusy(true);setSyncStatus('Müşteriler veritabanına aktarılıyor...');
+  try{
+   let created=0,existing=0,invalid=excluded;
+   for(let i=0;i<candidates.length;i+=500){
+    const result=await apiRequest('/customers/import',{
+     method:'POST',headers:{'X-CSRF-Token':csrfToken},
+     body:{customers:candidates.slice(i,i+500)}});
+    created+=result.created||0;existing+=result.existing||0;invalid+=result.invalid||0;
+   }
+   setSyncStatus('PostgreSQL kaydı tamamlandı: '+created+' yeni, '+existing+' mevcut, '+invalid+' eksik/geçersiz.');
+  }catch(err){
+   setSyncStatus('Müşteri kayıt hatası: '+(err.message||'Sunucuya ulaşılamıyor')+'. Önizleme korunuyor, yeniden deneyebilirsiniz.');
+  }finally{setSyncBusy(false);}
+ }
  async function upload(e){
   const file=e.target.files?.[0];e.target.value='';if(!file)return;
-  setBusy(true);setError('');
-  try{const result=await loadZiraatFile(file);setRecords(result.records);setExtraHeaders(result.extraHeaders);setFilename(file.name);setSelected([]);setPage(1);setFilter('all');}
-  catch(err){setError(err.message||'Dosya okunamadı.');}
+  setBusy(true);setError('');setSyncStatus('');
+  try{
+   const result=await loadZiraatFile(file);
+   setRecords(result.records);setExtraHeaders(result.extraHeaders);
+   setFilename(file.name);setSelected([]);setPage(1);setFilter('all');
+   await saveCustomersToDatabase(result.records);
+  }catch(err){setError(err.message||'Dosya okunamadı.');}
   finally{setBusy(false);}
  }
  const changeFilter=value=>{setFilter(value);setPage(1);};
@@ -62,9 +98,10 @@ export default function ExcelYuklePage(){
  return <div className="excel-page">
   <header className="excel-hero">
    <div className="excel-hero-left"><span className="excel-gem" aria-hidden="true">♢</span><div><h1>Ziraat Bankası · Hesap Hareketleri</h1><p>Excel/CSV içe aktarım · Açıklamadan Ad, Soyad, TCKN ayrıştırma · Lokal önizleme</p></div></div>
-   <div className="excel-actions"><input ref={fileRef} type="file" accept=".xlsx,.csv" hidden onChange={upload} aria-label="Ziraat hesap hareketleri dosyası seç"/><button className="excel-btn" onClick={()=>fileRef.current?.click()} disabled={busy}><span>⇧</span>{busy?'Dosya okunuyor...':'Ziraat Ekstresi Yükle'}</button><span className="excel-action-count"><b>{records.length}</b> İşlem Kaydı</span><button className="excel-btn excel-export" disabled={!records.length} onClick={downloadEnriched} title="Ayrıştırılmış hareketleri CSV olarak indir">▤ &nbsp; CSV İndir</button></div>
+   <div className="excel-actions"><input ref={fileRef} type="file" accept=".xlsx,.csv" hidden onChange={upload} aria-label="Ziraat hesap hareketleri dosyası seç"/><button className="excel-btn" onClick={()=>fileRef.current?.click()} disabled={busy}><span>⇧</span>{busy?'Dosya okunuyor...':'Ziraat Ekstresi Yükle'}</button><span className="excel-action-count"><b>{records.length}</b> İşlem Kaydı</span><button className="excel-btn excel-export" disabled={!records.length} onClick={downloadEnriched} title="Ayrıştırılmış hareketleri CSV olarak indir">▤ &nbsp; CSV İndir</button><button className="excel-btn excel-export" disabled={!records.length||!authenticated||syncBusy} onClick={()=>saveCustomersToDatabase(records)}>{syncBusy?'Kaydediliyor...':'☑ Müşteri Listesine Kaydet'}</button><Link className="excel-customer-link" to="/musteriler">Müşteri Listesi ↗</Link></div>
   </header>
   {error&&<div role="alert" className="excel-error">{error}</div>}
+  {syncStatus&&<div role="status" className="excel-file-info">{syncStatus}</div>}
   {filename&&<div className="excel-file-info" role="status">Ziraat önizleme: <strong>{filename}</strong> · {records.length} hareket · {extraHeaders.length} ek kaynak sütunu · Veriler yalnızca tarayıcı belleğinde tutulur.</div>}
   <section className="excel-stats" aria-label="Hareket özeti">
    <div className="excel-stat"><span className="excel-stat-icon amber">≡</span><div><span>Okunan hareket</span><strong>{records.length}</strong></div></div>
@@ -93,6 +130,6 @@ export default function ExcelYuklePage(){
    </div>
    <footer className="excel-table-footer"><span>{visible.length?((current-1)*perPage+1)+'–'+Math.min(current*perPage,visible.length)+' / '+visible.length+' hareket':'Gösterilecek hareket yok'}{selected.length?' · '+selected.length+' seçili':''}</span><div><button aria-label="Önceki sayfa" disabled={current===1} onClick={()=>setPage(p=>p-1)}>‹</button><span>{current} / {pages}</span><button aria-label="Sonraki sayfa" disabled={current===pages} onClick={()=>setPage(p=>p+1)}>›</button></div></footer>
   </section>
-  <p className="excel-demo-disclaimer">Dosya ve TCKN verileri sunucuya gönderilmez; yalnızca bu tarayıcı oturumunda işlenir. TCKN açık görüntülenir ve indirilen CSV’de de yer alır; ekranı ve dosyayı yetkisiz kişilerle paylaşmayın. Otomatik çıkarılan kişi bilgileri hatalı olabileceğinden doğrulanmalıdır. Banka muhasebe kaydı veya resmî fatura oluşturulmaz.</p>
+  <p className="excel-demo-disclaimer">Excel dosyasının tamamı sunucuya gönderilmez. Yetkili oturum açıkken geçerli Ad Soyad/TCKN çiftleri kalıcı müşteri veritabanına aktarılır. TCKN ekranda ve CSV’de açık bulunur; erişimi kısıtlayın. Otomatik ayrıştırmayı doğrulayın. Banka muhasebe kaydı veya resmî fatura oluşturulmaz.</p>
  </div>;
 }
