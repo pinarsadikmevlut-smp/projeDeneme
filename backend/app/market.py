@@ -4,6 +4,7 @@ One background poller per backend process, 10-second monotonic cadence.
 HTTP clients only read an immutable cached snapshot; they never wait for upstream I/O.
 """
 import json
+import logging
 import math
 import re
 import threading
@@ -11,6 +12,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from urllib.request import Request, urlopen
+
+logger = logging.getLogger(__name__)
 
 GOLD_URL = "https://static.altinkaynak.com/public/Gold"
 CURRENCY_URL = "https://static.altinkaynak.com/public/Currency"
@@ -179,7 +182,19 @@ class QuoteStore:
             delay = max(0, target - self.monotonic())
             if self._stop.wait(delay):
                 return
-            self.refresh_once()
+            try:
+                self.refresh_once()
+            except Exception:  # Never let an unexpected feed shape kill the polling loop.
+                logger.exception("Market refresh failed unexpectedly")
+                with self._lock:
+                    current = self._snapshot
+                    self._snapshot = {
+                        **current,
+                        "state": "error", "stale": True,
+                        "quotes": [{**item, "stale": True} for item in current["quotes"]],
+                        "staleCount": len(current["quotes"]),
+                        "error": "Market poller error",
+                    }
             target += self.interval
             # No overlapping fetches or bursts after slow/outage conditions.
             if target <= self.monotonic():
@@ -203,7 +218,7 @@ class QuoteStore:
                         # Validate before replacing a previously good feed.
                         normalize_feed(group, payload, now_utc=self.clock())
                         responses[group] = payload
-                    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+                    except Exception as exc:  # Isolate malformed upstream data per feed.
                         errors[group] = type(exc).__name__
             checked = self.clock()
             with self._lock:
