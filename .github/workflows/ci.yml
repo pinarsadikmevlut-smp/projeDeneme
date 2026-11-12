@@ -1,7 +1,7 @@
 name: goldenSoft CI
 on:
   push:
-    branches: [main, feature/goldensoft-initial]
+    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend]
   pull_request:
     branches: [main]
 jobs:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: pinargold-frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
