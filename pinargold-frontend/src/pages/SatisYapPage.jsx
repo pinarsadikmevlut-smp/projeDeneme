@@ -1,0 +1,1 @@
+import ModulePlaceholder from '../components/layout/ModulePlaceholder';export default function SatisYapPage(){return <ModulePlaceholder title="Satış Yap" description="Kuyumcu satış işlemleri için ayrılmış modül. Henüz işlem yapılmaz."/>;}

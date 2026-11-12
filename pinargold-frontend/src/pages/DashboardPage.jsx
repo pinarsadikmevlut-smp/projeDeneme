@@ -1,0 +1,1 @@
+import ModulePlaceholder from '../components/layout/ModulePlaceholder';export default function DashboardPage(){return <ModulePlaceholder title="Dashboard" description="Genel bakış, temel metrikler ve raporlar için hazırlanan modül."/>;}
