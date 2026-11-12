@@ -33,10 +33,21 @@ def create_app(test_config=None):
         PERMANENT_SESSION_LIFETIME=1800,
         MAX_CONTENT_LENGTH=1024 * 1024,
         SECRET_KEY=os.getenv("SECRET_KEY"),
+        CUSTOMER_ADMIN_USERNAME=os.getenv("CUSTOMER_ADMIN_USERNAME", ""),
+        CUSTOMER_ADMIN_PASSWORD=os.getenv("CUSTOMER_ADMIN_PASSWORD", ""),
     )
     if test_config:
         app.config.update(test_config)
     db.init_app(app)
+    from .customers import bp as customers_bp, is_customer_admin, Customer
+    app.register_blueprint(customers_bp)
+
+    @app.cli.command("init-db")
+    def init_db_command():
+        """Initialize missing local customer/audit tables; does not delete data."""
+        with app.app_context():
+            db.create_all()
+        print("Customer and audit tables initialized.")
 
     @app.after_request
     def security_headers(response):
@@ -56,7 +67,11 @@ def create_app(test_config=None):
 
     @app.get("/api/auth/session")
     def auth_session():
-        # No authentication provider is configured yet: never impersonate a demo user.
+        if is_customer_admin():
+            return jsonify(authenticated=True,
+                user={"username": session["customer_admin"]},
+                permissions=["customers:read", "customers:write"],
+                csrfToken=session.get("customer_csrf"))
         return jsonify(authenticated=False, user=None, permissions=[])
 
     @app.get("/api/market/prices")
