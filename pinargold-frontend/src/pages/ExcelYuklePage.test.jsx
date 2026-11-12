@@ -2,6 +2,7 @@
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
+import {DemoCustomersProvider,useDemoCustomers} from '../context/DemoCustomersContext';
 
 const session=vi.hoisted(()=>({authenticated:false,csrfToken:null}));
 vi.mock('../context/AuthContext',()=>({useAuth:()=>session}));
@@ -13,6 +14,8 @@ vi.mock('../services/ziraatStatement.service',async importOriginal=>{
 import {loadZiraatFile} from '../services/ziraatStatement.service';
 import {apiRequest} from '../services/apiClient';
 import ExcelYuklePage from './ExcelYuklePage';
+const renderPage=()=>render(<DemoCustomersProvider><MemoryRouter><ExcelYuklePage/><DemoCount/></MemoryRouter></DemoCustomersProvider>);
+function DemoCount(){const {customers}=useDemoCustomers();return <span data-testid="demo-count">{customers.length}</span>;}
 beforeEach(()=>{loadZiraatFile.mockReset();apiRequest.mockReset();session.authenticated=false;session.csrfToken=null;});
 afterEach(cleanup);
 describe('Ziraat upload preview',()=>{
@@ -23,7 +26,7 @@ describe('Ziraat upload preview',()=>{
    firstName:'Ayşe',lastName:'Kaya',tckn:'10000000146',identityReview:true,identitySource:'Açıklama (BÜYÜK HARF)',
    debit:0,credit:100.5,amount:100.5,balance:500,direction:'in',rawFields:{Kanal:'FAST'}
   }],extraHeaders:['Kanal']});
-  render(<MemoryRouter><ExcelYuklePage/></MemoryRouter>);
+  renderPage();
   fireEvent.change(screen.getByLabelText('Ziraat hesap hareketleri dosyası seç'),{target:{files:[new File(['mock'],'ziraat.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})]}});
   await waitFor(()=>expect(screen.getByText('A100')).toBeTruthy());
   expect(screen.getByLabelText('Ad Soyad 1').value).toBe('Ayşe Kaya');
@@ -49,7 +52,7 @@ describe('Ziraat upload preview',()=>{
    amount:500,debit:0,credit:500,direction:'in',rawFields:{}};
   loadZiraatFile.mockResolvedValue({records:[person],extraHeaders:[]});
   apiRequest.mockResolvedValue({created:1,existing:0,invalid:0});
-  render(<MemoryRouter><ExcelYuklePage/></MemoryRouter>);
+  renderPage();
   fireEvent.change(screen.getByLabelText('Ziraat hesap hareketleri dosyası seç'),{
    target:{files:[new File(['test'],'ziraat.xlsx')]}});
   await waitFor(()=>expect(apiRequest).toHaveBeenCalledWith('/customers/import',{
@@ -57,5 +60,19 @@ describe('Ziraat upload preview',()=>{
    body:{customers:[{fullName:'Ayşe Kaya',tckn:'10000000146'}]}
   }));
   expect(await screen.findByText(/PostgreSQL kaydı tamamlandı/)).toBeTruthy();
+ });
+
+ it('adds uploaded fictional customers to the in-memory demo list with no API call',async()=>{
+  session.authenticated=false;session.csrfToken=null;
+  const person={id:1,date:'01.11.2026',reference:'A100',
+   description:'DEMO GELEN FAST ÖRNEK MÜŞTERİ 00000000009',fullName:'Örnek Müşteri Dokuz',
+   tckn:'00000000009',amount:500,debit:0,credit:500,direction:'in',rawFields:{}};
+  loadZiraatFile.mockResolvedValue({records:[person],extraHeaders:[]});
+  renderPage();
+  expect(screen.getByTestId('demo-count').textContent).toBe('3');
+  fireEvent.change(screen.getByLabelText('Ziraat hesap hareketleri dosyası seç'),{target:{files:[new File(['test'],'ziraat.xlsx')]}});
+  await waitFor(()=>expect(screen.getByTestId('demo-count').textContent).toBe('4'));
+  expect(screen.getByText(/DEMO: 1 yeni/)).toBeTruthy();
+  expect(apiRequest).not.toHaveBeenCalled();
  });
 });
