@@ -1,3 +1,23 @@
+## Girişsiz demo modu (güncel)
+
+**Müşteri Listesi menüsü artık doğrudan açılır.** Backend oturumu yoksa tamamen
+kurgusal örnek müşteriler gösterilir; TCKN sütunundaki `0000000000x` değerleri
+geçersiz test numaralarıdır, gerçek kimlik numarası değildir.
+
+- Demo liste içinde arama, yeni müşteri ekleme, düzenleme ve Excel'den toplu
+  aktarma çalışır. Aynı TCKN tekrarlanmaz.
+- Girişsiz demo modunda veriler yalnızca **React belleğinde** tutulur.
+  PostgreSQL'e gönderilmez ve **tarayıcı sayfası yenilenince sıfırlanır**.
+- Gerçek müşteri bilgilerini demo ortamına yüklemeyin. Excel önizlemesi
+  tarayıcıda işlenir; API'ye aktarılmaz.
+- Gerçek PostgreSQL müşteri API'si kimlik doğrulaması ve CSRF kontrolü
+  gerektirmeyi sürdürür. İleride ortak kullanıcı yönetimi eklendiğinde
+  demo modundan yetkili kalıcı kayda geçilebilecektir.
+- Bu demo geliştirmesi veritabanındaki mevcut müşteri verilerini veya
+  Docker volume'larını değiştirmez.
+
+---
+
 # pinarGold — Kalıcı Müşteri Listesi (PostgreSQL)
 
 ## Mimari kararı
@@ -55,13 +75,13 @@ Vite `/api` isteklerini 5001 portundaki Flask'a yönlendirir. Yerel HTTP oturumu
 
 ## Kullanım akışı
 
-1. **Müşteri Listesi** menüsünden yetkili operatör girişi yapın.
+1. **Girişsiz demo için** Müşteri Listesi menüsüne doğrudan girin; örnek müşteriler gösterilir. Kalıcı PostgreSQL işlemleri için mevcut backend yönetici oturumu ayrı olarak gereklidir.
 2. **Excel Yükle** menüsünden Ziraat `.xlsx` / `.csv` ekstresini seçin.
 3. İçerikten ayrıştırılan **geçerli Ad Soyad + TCKN** kayıtları otomatik olarak `POST /api/customers/import` üzerinden PostgreSQL'e kaydedilir. Eksik veya kontrol basamağı hatalı TCKN kaydedilmez.
 4. Sonuçta yeni, mevcut ve geçersiz kayıt sayıları gösterilir. Aynı TCKN yeniden yüklenirse ikinci kayıt açılmaz; otomatik aktarım **mevcut ismi değiştirmez**.
 5. **Müşteri Listesi** sayfasından arama yapabilir, **+ Yeni Müşteri** ile ekleyebilir, **Düzenle** ile Ad Soyad/TCKN değiştirebilirsiniz. Değişiklikler kalıcıdır.
 
-Oturum açık değilken Excel önizlemesi yerel tarayıcı belleğinde görüntülenir; **veritabanına hiçbir aktarım yapılmaz**. Girişten sonra dosyayı yeniden yükleyin.
+Oturum yokken Excel'den ayrıştırılan müşteri bilgileri **yalnızca geçici demo listesine** kopyalanır. Kalıcı PostgreSQL aktarımı yapılmaz; sayfa yenilenince veriler sıfırlanır.
 
 ## Güvenlik ve sınırlar
 

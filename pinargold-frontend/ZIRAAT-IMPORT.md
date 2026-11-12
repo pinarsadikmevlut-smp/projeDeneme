@@ -1,3 +1,9 @@
+> **Demo davranışı:** Müşteri yönetimi için oturum açılmadıysa Excel Yükle
+> ekranından çıkarılan Ad Soyad/TCKN çiftleri yalnızca geçici Müşteri
+> Listesi demo belleğine aktarılır; PostgreSQL'e yazılmaz. Gerçek kişisel
+> veriler yerine kurgusal test kayıtları kullanın. Sayfa yenilenirse
+> demo verileri sıfırlanır.
+
 # pinarGold — Ziraat Bankası Hesap Hareketleri İçe Aktarma
 
 ## Kaynak formatlar
