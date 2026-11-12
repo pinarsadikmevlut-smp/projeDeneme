@@ -6,5 +6,5 @@ export const navigation = [
   { id:'excel',label:'Excel Yükle',path:'/excel-yukle',icon:faFileExcel,page:'ExcelYuklePage' },
   { id:'taslak',label:'Taslak Faturalar',path:'/taslak-faturalar',icon:faFileInvoice,page:'TaslakFaturaPage',badge:0 },
   { id:'mysoft',label:'Mysoft Aktarılanlar',path:'/mysoft-aktarilanlar',icon:faPaperPlane,page:'MysoftAktarilanlarPage' },
-  { id:'musteriler',label:'Müşteriler',path:'/musteriler',icon:faUsers,page:'MusterilerPage',badge:539 }
+  { id:'musteriler',label:'Müşteri Listesi',path:'/musteriler',icon:faUsers,page:'MusterilerPage' }
 ];

@@ -41,3 +41,7 @@
 .dark .excel-amount-badge.in{background:#153c2c;border-color:#16694c;color:#9aebc7}
 .dark .excel-amount-badge.out{background:#43232d;border-color:#8a3649;color:#ffbdc7}
 .dark .excel-amount-badge.unknown{background:#334155;border-color:#475569;color:#d1d5db}
+
+.excel-customer-link{color:#ad7b19;border:1px solid #e9cc8d;background:#fff9e9;border-radius:9px;padding:11px 13px;font-size:11px;font-weight:800;white-space:nowrap}
+.excel-customer-link:hover{background:#fff1cd}
+.dark .excel-customer-link{background:#33291b;border-color:#6d5733;color:#f1cf8c}
