@@ -1,7 +1,7 @@
 name: pinarGold CI
 on:
   push:
-    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-security-foundation, feature/pinargold-altinkaynak-live]
+    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-security-foundation, feature/pinargold-altinkaynak-live, feature/pinargold-market-reliability]
   pull_request:
     branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-excel-upload-ui]
 jobs:
@@ -28,6 +28,7 @@ jobs:
         with:
           node-version: "22"
       - run: npm install --no-audit --no-fund
+      - run: npm run test
       - run: npm run build
   compose:
     runs-on: ubuntu-latest
