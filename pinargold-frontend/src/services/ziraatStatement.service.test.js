@@ -51,7 +51,7 @@ describe('Ziraat Excel / CSV statement import',()=>{
   expect(matrix[1][1]).toContain('Ayşe; Kaya');
   const result=recordsFromMatrix(matrix);
   expect(result.records[0].credit).toBe(100.5);
-  const exported=enrichedCsv([{...result.records[0],firstName:'=HYPERLINK',lastName:'Kaya'}]);
+  const exported=enrichedCsv([{...result.records[0],fullName:'=HYPERLINK',firstName:'=HYPERLINK',lastName:'Kaya'}]);
   expect(exported).toContain("'=HYPERLINK");
   expect(exported).toContain('Ad Soyad');
   expect(exported).toContain('İşlem Tutarı');
