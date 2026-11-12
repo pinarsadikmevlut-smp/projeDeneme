@@ -1,36 +1,85 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dev Workspace</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#073b85">
+  <title>Yönetim Paneli | Telekom Teması</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <main class="panel">
-    <div class="logo">DW</div>
-    <h1>Dev Workspace</h1>
-    <p>GitHub Codespaces geliştirme ortamına hoş geldiniz.</p>
-    <div class="status">
-      <span class="dot"></span>
-      Uygulama çalışıyor
+  <div class="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Ana menü">
+      <a class="brand" href="{{ url_for('home') }}"><span class="brand-mark">T</span><span>Telekom <small>Yönetim Paneli</small></span></a>
+      <div class="menu-label">ÇALIŞMA ALANI</div>
+      <nav aria-label="Sayfalar">
+        <a class="nav-item active" href="#overview" aria-current="page"><span>▦</span> Genel Bakış</a>
+        <a class="nav-item" href="#services"><span>◈</span> Servisler</a>
+        <a class="nav-item" href="#activity"><span>◷</span> Son İşlemler</a>
+        <a class="nav-item" href="#connection"><span>⌁</span> Bağlantı Testi</a>
+      </nav>
+      <div class="sidebar-foot"><span class="online-dot"></span> Geliştirme ortamı <small>Demo arayüz · v1.0</small></div>
+    </aside>
+    <div class="main-wrap">
+      <header class="topbar">
+        <button class="menu-toggle" id="menuToggle" aria-label="Menüyü aç veya kapat" aria-expanded="false" aria-controls="sidebar">☰</button>
+        <div class="breadcrumb">Çalışma Alanı <span>/</span> <strong>Genel Bakış</strong></div>
+        <div class="top-right"><span class="environment">● Demo Ortamı</span><span class="avatar" aria-label="Demo kullanıcı">YK</span></div>
+      </header>
+      <main class="content" id="overview">
+        <div class="welcome"><div><p class="eyebrow">YÖNETİM MERKEZİ</p><h1>Genel Bakış</h1><p>Uygulama servislerini ve sistem durumunu tek ekrandan takip edin.</p></div><span class="date-pill" id="today"></span></div>
+        <section class="hero" aria-label="Hoş geldiniz"><div><span class="hero-tag">TELEKOM TEMALI DEMO</span><h2>Merkezi yönetim, sade deneyim.</h2><p>Servis kontrolleri, bağlantı durumu ve uygulama bileşenleri için modern çalışma alanınız.</p><a href="#connection" class="hero-link">Bağlantıyı kontrol et →</a></div><div class="hero-art" aria-hidden="true"><div class="orb orb-one"></div><div class="orb orb-two"></div><div class="orb orb-three"></div></div></section>
+        <div class="section-heading"><h2>Özet Bilgiler</h2><span>Gösterim amaçlı örnek veriler</span></div>
+        <section class="stats" aria-label="Örnek istatistikler">
+          <article class="stat-card"><div class="stat-icon blue">▦</div><p>Toplam Servis</p><strong>04</strong><small>Örnek veri</small></article>
+          <article class="stat-card"><div class="stat-icon teal">✓</div><p>Aktif Servis</p><strong>03</strong><small>Örnek veri</small></article>
+          <article class="stat-card"><div class="stat-icon purple">◷</div><p>Bekleyen İşlem</p><strong>01</strong><small>Örnek veri</small></article>
+          <article class="stat-card"><div class="stat-icon amber">◇</div><p>Bildirimler</p><strong>08</strong><small>Örnek veri</small></article>
+        </section>
+        <div class="dashboard-grid">
+          <section class="surface" id="services"><div class="surface-head"><div><h2>Servis Durumu</h2><p>Uygulama bileşenlerine genel bakış</p></div><span class="demo-label">DEMO</span></div><div class="service-row"><span class="service-symbol">▣</span><div><strong>Web Uygulaması</strong><small>Flask arayüz servisi</small></div><span class="status-chip neutral">Kontrol edilmedi</span></div><div class="service-row"><span class="service-symbol">◫</span><div><strong>Veritabanı</strong><small>PostgreSQL bağlantısı</small></div><span class="status-chip neutral">Kontrol edilmedi</span></div><div class="service-row"><span class="service-symbol">⌁</span><div><strong>Health API</strong><small>/api/health</small></div><span class="status-chip" id="apiStatus">Kontrol edilmedi</span></div></section>
+          <section class="surface" id="connection"><div class="surface-head"><div><h2>Bağlantı Kontrolü</h2><p>Flask API erişimini doğrulayın</p></div></div><div class="connection-graphic" aria-hidden="true">⌁</div><p class="connection-text">Sistem API durumunu anlık olarak test edebilirsiniz.</p><button id="testApi" class="primary-button" type="button">API Bağlantısını Test Et</button><p id="result" role="status" aria-live="polite">Henüz bağlantı testi yapılmadı.</p></section>
+        </div>
+        <section class="surface activity" id="activity"><div class="surface-head"><div><h2>Son İşlemler</h2><p>Örnek etkinlik kayıtları — gerçek işlem geçmişi değildir</p></div><span class="demo-label">ÖRNEK</span></div><div class="activity-row"><span class="activity-dot"></span><div><strong>Yönetim paneli tasarımı</strong><small>Yeni kullanıcı arayüzü örneği</small></div><span>Demo</span></div><div class="activity-row"><span class="activity-dot teal-dot"></span><div><strong>API bağlantı testi</strong><small>Yukarıdaki butonla gerçek kontrol yapılabilir</small></div><span>Hazır</span></div></section>
+        <footer>projeDeneme · Telekom renklerinden esinlenen demo yönetim paneli</footer>
+      </main>
     </div>
-    <button onclick="checkAPI()">API Bağlantısını Test Et</button>
-    <p id="result"></p>
-  </main>
+  </div>
   <script>
+    const sidebar = document.getElementById('sidebar');
+    const toggle = document.getElementById('menuToggle');
+    toggle.addEventListener('click', () => {
+      const opened = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', String(opened));
+    });
+    document.querySelectorAll('.nav-item').forEach(link => link.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      link.classList.add('active');
+      sidebar.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }));
+    document.getElementById('today').textContent = new Intl.DateTimeFormat('tr-TR', {day:'numeric',month:'long',year:'numeric'}).format(new Date());
     async function checkAPI() {
-      const result = document.getElementById("result");
+      const result = document.getElementById('result');
+      const status = document.getElementById('apiStatus');
+      const button = document.getElementById('testApi');
+      button.disabled = true;
+      result.textContent = 'Bağlantı kontrol ediliyor...';
       try {
-        const response = await fetch("/api/health");
-        if (!response.ok) throw new Error("API hatası");
+        const response = await fetch('{{ url_for("health") }}', {cache:'no-store'});
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         const data = await response.json();
-        result.textContent = data.message;
+        if (data.status !== 'OK') throw new Error('Beklenmeyen API yanıtı');
+        result.textContent = data.message || 'API bağlantısı başarılı.';
+        status.textContent = 'Çalışıyor';
+        status.className = 'status-chip success';
       } catch (error) {
-        result.textContent = "API bağlantısı başarısız.";
-      }
+        result.textContent = 'API bağlantısı başarısız. Lütfen tekrar deneyin.';
+        status.textContent = 'Bağlantı hatası';
+        status.className = 'status-chip error';
+      } finally { button.disabled = false; }
     }
+    document.getElementById('testApi').addEventListener('click', checkAPI);
   </script>
 </body>
 </html>
