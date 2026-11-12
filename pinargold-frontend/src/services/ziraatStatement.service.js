@@ -118,9 +118,9 @@ export function recordsFromMatrix(matrix){
    const out=signed<0||/cikis|giden|borc/.test(type);
    if(out)debit=Math.abs(signed);else credit=Math.abs(signed);
   }
-  if(!date||/^(toplam|genel toplam)/i.test(date)||!description&&debit===0&&credit===0)continue;
+  if(!date||/^(toplam|genel toplam|muh(?:asebe)? tarih|tarih)$/i.test(date)||!description&&debit===0&&credit===0)continue;
   const person=parseIdentity(description,get(row,'tckn'),get(row,'fullName'));
-  const rowFields=Object.fromEntries(headers.map((h,i)=>[h,excelDate(row[i])]));
+  const rowFields=Object.fromEntries(headers.map((h,i)=>[h,['date','valueDate'].includes(mapped[i])?excelDate(row[i]):normText(row[i])]));
   records.push({
    id:records.length+1,date,valueDate:excelDate(get(row,'valueDate')),
    reference:normText(get(row,'reference')),description,
