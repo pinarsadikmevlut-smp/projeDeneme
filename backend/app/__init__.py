@@ -59,6 +59,11 @@ def create_app(test_config=None):
         # No authentication provider is configured yet: never impersonate a demo user.
         return jsonify(authenticated=False, user=None, permissions=[])
 
+    @app.get("/api/market/prices")
+    def market_prices():
+        from .market import get_market_data
+        return jsonify(get_market_data())
+
     @app.get("/api/connection")
     def connection():
         return jsonify(status="ok", source="simulation", timestamp=datetime.now(timezone.utc).isoformat())
