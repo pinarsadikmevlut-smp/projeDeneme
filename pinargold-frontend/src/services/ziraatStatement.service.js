@@ -13,9 +13,9 @@ const FIELDS = {
  fullName:['Ad Soyad','Adı Soyadı','İsim Soyisim','Gönderen Ad Soyad','Müşteri']
 };
 export const STANDARD_COLUMNS = [
- ['date','MUH. TARİH'],['valueDate','VALÖR'],['reference','İŞLEM NO'],
- ['description','İŞLEM AÇIKLAMASI'],['firstName','AD'],['lastName','SOYAD'],['tckn','TCKN'],
- ['debit','BORÇ (₺)'],['credit','ALACAK (₺)'],['balance','BAKİYE (₺)']
+ ['date','MUH. TARİH'],['reference','İŞLEM NO'],
+ ['description','İŞLEM AÇIKLAMASI'],['fullName','AD SOYAD'],['tckn','TCKN'],
+ ['amount','İŞLEM TUTARI'],['balance','BAKİYE (₺)']
 ];
 export const cleanHeader = x => String(x??'').toLocaleLowerCase('tr-TR')
  .replace(/ı/g,'i').replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s')
@@ -63,27 +63,80 @@ export function validTckn(v){
   && a.slice(0,10).reduce((sum,n)=>sum+n,0)%10===a[10];
 }
 const LETTERS='A-Za-zÇĞİÖŞÜçğıöşü';
-const NAME_RE=new RegExp('(?:G[ÖO]NDEREN|ALICI|AD[Iİ]?\\s+SOYAD[Iİ]?|ADI\\s+SOYADI|KARŞI\\s+TARAF|HESAP\\s+SAHİBİ|M[ÜU]ŞTERİ)(?:\\s+(?:AD[Iİ]?|SOYAD[Iİ]?)){0,2}\\s*[:=\\-]\\s*(['+LETTERS+']+(?:\\s+['+LETTERS+']+){1,4})','i');
-const NAME_STOP=/\b(?:TCKN|IBAN|TC|T\.C\.|FAST|EFT|HAVALE|AÇIKLAMA|REFERANS|REF|GÖNDERİM|GÖNDEREN|ALICI)\b/i;
-function splitName(text){
+const NAME_RE=new RegExp('(?:G[ÖO]NDEREN|ALICI|AD[Iİ]?\\s+SOYAD[Iİ]?|ADI\\s+SOYADI|KARŞI\\s+TARAF|HESAP\\s+SAHİBİ|M[ÜU]ŞTERİ)(?:\\s+(?:AD[Iİ]?|SOYAD[Iİ]?)){0,2}\\s*[:=\\-]?\\s*(['+LETTERS+']+(?:\\s+['+LETTERS+']+){1,6})','i');
+// Uppercase runs are only a HEURISTIC. Financial transaction words must not be treated as names.
+const NON_NAME_TERMS=new Set((
+ 'FAST EFT HAVALE GELEN GIDEN GİDEN GÖNDEREN GONDEREN GÖNDERİCİ GONDERICI '+
+ 'ALICI ALICIYA GÖNDERİLEN GONDERILEN GÖNDERİM GONDERIM TARAFINDAN '+
+ 'PARA TRANSFER TRANSFERİ TRANSFERI İŞLEM ISLEM İŞLEMİ ISLEMI HAREKET '+
+ 'BANKA BANKASI ZİRAAT ZIRAAT TÜRKİYE TURKIYE TC TCKN IBAN HESAP '+
+ 'AÇIKLAMA ACIKLAMA REFERANS REF DEKONT NO NUMARASI KOD KODU '+
+ 'ÖDEME ODEME ÖDEMESİ ODEMESI TAHSİLAT TAHSILAT KREDİ KREDI KARTI '+
+ 'FATURA FATURASI FATURAÖDEMESİ MASRAF MASRAFI KOMİSYON KOMISYON '+
+ 'POS ATM SWIFT BSMV BAHŞİŞ KDV VİRMAN VIRMAN TUTAR BAKİYE BAKIYE '+
+ 'SAYIN HİZMET HIZMET BEDELİ BEDELI İADE IADE GELİŞ GELIS '+
+ 'TİCARET TICARET LİMİTED LIMITED ŞİRKET ŞIRKET ŞİRKETİ SIRKETI '+
+ 'ANONİM ANONIM AŞ AS LTD STI ŞTİ IBANLI SORGULAMA'
+).split(/\s+/).map(cleanHeader));
+const UPPER_WORD='[A-ZÇĞİÖŞÜ]{2,}(?:[\\x27’][A-ZÇĞİÖŞÜ]+)?';
+const UPPER_RUN=new RegExp('(?<![A-Za-zÇĞİÖŞÜçğıöşü])'+UPPER_WORD+'(?:\\s+'+UPPER_WORD+'){1,15}','g');
+const NAME_STOP=/\b(?:TCKN|IBAN|TC|FAST|EFT|HAVALE|AÇIKLAMA|REFERANS|GÖNDEREN|ALICI)\b/i;
+
+export function splitFullName(text){
  const names=normText(text).split(' ').filter(Boolean);
- if(names.length<2||names.length>5||names.some(x=>!new RegExp('^['+LETTERS+']+$').test(x)||NAME_STOP.test(x)))return null;
+ if(names.length<2||names.length>5||names.some(x=>
+    !new RegExp('^['+LETTERS+']+$').test(x)||
+    NON_NAME_TERMS.has(cleanHeader(x))||NAME_STOP.test(x)))return null;
  return {firstName:names.slice(0,-1).join(' '),lastName:names.at(-1)};
 }
+function labelledName(text){
+ const match=text.match(NAME_RE);
+ if(!match)return null;
+ const valid=[];
+ for(const word of match[1].split(/\s+/)){
+  if(NON_NAME_TERMS.has(cleanHeader(word)))break;
+  valid.push(word);
+ }
+ return splitFullName(valid.join(' '));
+}
+function uppercaseName(text){
+ // Only contiguous Turkish uppercase words; split on known bank-operation keywords.
+ // In ambiguous prose, show a review indicator so the operator can verify the result.
+ let best=null;
+ const cleaned=text.replace(/(?<!\d)[1-9]\d{10}(?!\d)/g,' ');
+ for(const match of cleaned.matchAll(UPPER_RUN)){
+  let words=[];
+  const consider=()=>{
+   const candidate=splitFullName(words.join(' '));
+   if(candidate&&(!best||words.length>best.words))best={...candidate,words:words.length};
+   words=[];
+  };
+  for(const word of match[0].split(/\s+/)){
+   if(NON_NAME_TERMS.has(cleanHeader(word)))consider();
+   else words.push(word);
+  }
+  consider();
+ }
+ return best?{firstName:best.firstName,lastName:best.lastName}:null;
+}
 export function parseIdentity(description, explicitTckn='', explicitName=''){
- const original=normText(description),labelled=original.match(/(?:TCKN|T\.?\s*C\.?\s*K[İI]ML[İI]K\s*(?:NO|NUMARASI)?|TC\s*NO)\s*[:=./-]?\s*(\d{11})(?!\d)/i);
+ const original=normText(description);
+ const labelled=original.match(/(?:TCKN|T\.?\s*C\.?\s*K[İI]ML[İI]K\s*(?:NO|NUMARASI)?|TC\s*NO)\s*[:=./-]?\s*(\d{11})(?!\d)/i);
  const standalone=[...original.matchAll(/(?<!\d)([1-9]\d{10})(?!\d)/g)].map(x=>x[1]);
  const id=stringValue(explicitTckn).replace(/\D/g,'').slice(0,11);
  const tckn=(id.length===11?id:'')||labelled?.[1]||standalone.find(validTckn)||'';
- const nameFromLabel=original.match(NAME_RE);
- // Keep unlabelled names empty: guessing counterparties from arbitrary prose is unsafe.
- const parsed=splitName(explicitName)||(nameFromLabel?splitName(nameFromLabel[1].replace(/\b(?:TCKN|IBAN|FAST|EFT).*$/i,'')):null);
+ const explicit=splitFullName(explicitName);
+ const tagged=explicit?null:labelledName(original);
+ const upper=explicit||tagged?null:uppercaseName(original);
+ const parsed=explicit||tagged||upper;
+ const identitySource=explicit?'Sütun':tagged?'Açıklama':upper?'Açıklama (BÜYÜK HARF)':'Bulunamadı';
  return {
   firstName:parsed?.firstName||'',lastName:parsed?.lastName||'',tckn,
-  identityReview:!!(tckn&&!validTckn(tckn))||!parsed,
-  identitySource:parsed?(explicitName?'Sütun':'Açıklama'):'Bulunamadı'
+  identityReview:!!(tckn&&!validTckn(tckn))||!parsed||!!upper,
+  identitySource
  };
 }
+
 const headerLookup=header=>{
  const h=cleanHeader(header);
  return Object.entries(FIELD_ALIASES).find(([,values])=>values.has(h))?.[0]||null;
@@ -126,7 +179,7 @@ export function recordsFromMatrix(matrix){
    reference:normText(get(row,'reference')),description,
    debit,credit,balance:parseMoney(get(row,'balance')),
    amount:credit>0?credit:debit,direction:credit>0?'in':debit>0?'out':'unknown',
-   ...person,rawFields:rowFields
+   ...person,fullName:[person.firstName,person.lastName].filter(Boolean).join(' '),rawFields:rowFields
   });
  }
  if(!records.length)throw Error('Okunabilir hesap hareketi bulunamadı.');
@@ -194,7 +247,10 @@ function safeCsvCell(v){
  return '"'+text.replace(/"/g,'""')+'"';
 }
 export function enrichedCsv(records,extraHeaders=[]){
- const headers=['Muh Tarih','Valör','İşlem No','İşlem Açıklaması','Ad','Soyad','TCKN','Borç','Alacak','Bakiye',...extraHeaders];
- const rows=records.map(r=>[r.date,r.valueDate,r.reference,r.description,r.firstName,r.lastName,r.tckn,r.debit,r.credit,r.balance,...extraHeaders.map(h=>r.rawFields[h])]);
+ const headers=['Muh Tarih','İşlem No','İşlem Açıklaması','Ad Soyad','TCKN','İşlem Tutarı','İşlem Yönü','Bakiye',...extraHeaders];
+ const rows=records.map(r=>[r.date,r.reference,r.description,
+  r.fullName??[r.firstName,r.lastName].filter(Boolean).join(' '),
+  r.tckn,r.amount,r.direction==='in'?'Gelen':r.direction==='out'?'Giden':'Belirsiz',
+  r.balance,...extraHeaders.map(h=>r.rawFields[h])]);
  return '\uFEFF'+[headers,...rows].map(row=>row.map(safeCsvCell).join(';')).join('\r\n');
 }
