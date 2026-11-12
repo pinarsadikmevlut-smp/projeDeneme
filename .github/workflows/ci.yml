@@ -1,9 +1,9 @@
-name: goldenSoft CI
+name: pinarGold CI
 on:
   push:
-    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend]
+    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-security-foundation]
   pull_request:
-    branches: [main]
+    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend]
 jobs:
   backend:
     runs-on: ubuntu-latest
