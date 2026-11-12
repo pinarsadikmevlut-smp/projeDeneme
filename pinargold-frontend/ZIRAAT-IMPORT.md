@@ -18,15 +18,19 @@ Kaynaklar:
 ## Kimlik ayrıştırma
 
 `İşlem Açıklaması` içinde `Gönderen:`, `Alıcı:`, `Adı Soyadı:` gibi **etiketli** kişi bilgilerini ve `TCKN:` / `TC Kimlik No:` sonrası 11 haneli değeri ayırır.
-Ad ve soyad ayrı tablo sütunlarıdır. Sonda yer alan tek kelime varsayılan soyad kabul edilir; çoklu soyad veya kurum adı otomatik kesin tespit edilemez.
+Ad Soyad tek tabloda gösterilir; ayrıştırma sırasında ilk ad(lar) ve son sözcük soyad olarak ele alınır. Çoklu soyad veya kurum adı otomatik kesin tespit edilemez.
 Etiketsiz 11 haneli değer yalnızca TCKN doğrulama kuralına uyuyorsa alınır; etiketli ancak doğrulaması geçersiz değerler kontrol işaretiyle gösterilir.
-Yanlış eşleştirme riskinden dolayı rastgele transfer açıklamasından kişi adı **uydurulmaz**; bulunamayan alanlar boş kalır.
-Kullanıcı önizlemede Ad / Soyad / TCKN hücrelerini elle düzeltebilir. TCKN varsayılan maskeli görünür.
+Etiket bulunmadığında açıklamadaki **tamamı büyük harfli, iki veya daha fazla sözcüklü kişi adı adayları** ayrıca aranır; FAST, EFT, HAVALE, BANKA gibi işlem ifadeleri dışlanır. Bu yöntemin sonucu **tahmini** olduğundan operatörün gözden geçirmesi gerekir. Güvenilir aday bulunamazsa alan boş kalır.
+Kullanıcı önizlemede Ad Soyad / TCKN hücrelerini elle düzeltebilir. Kullanıcı isteği üzerine **TCKN maskelenmeden** gösterilir.
+
+## Ekran sütunları
+
+Görüntülenen sütunlar: Muh Tarih, İşlem No, İşlem Açıklaması, Ad Soyad, TCKN, İşlem Tutarı, Bakiye. **Valör sütunu gizlenir** (dosyadan okuma korunur); Borç ve Alacak tek **İşlem Tutarı** sütununda birleştirilir. **Gelen** tutar yeşil, **Giden** tutar kırmızı etiketle gösterilir. CSV dışa aktarımı aynı birleşik düzeni, ayrıca `İşlem Yönü` bilgisini içerir.
 
 ## Güvenlik ve uyumluluk
 
 Excel ve CSV **tarayıcıda** okunur; sunucuya dosya gönderilmez, otomatik muhasebe veya müşteri kaydı oluşturulmaz.
-Çıktı yerel CSV dosyası olarak indirilebilir; içinde TCKN'nin tam değeri bulunabileceği için yalnızca yetkili kullanıcılarca güvenli şekilde saklanmalıdır.
+Önizleme ve indirilen yerel CSV dosyası TCKN'nin tam değerini içerir; ekranın üçüncü kişilerce görülmesi ve dosyanın paylaşılması konusunda özel dikkat gereklidir. Yalnızca yetkili kullanıcılarca güvenli şekilde saklanmalıdır.
 CSV formül enjeksiyonuna karşı şüpheli hücre başlangıçları Excel için metin olarak kaçışlanır.
 Üretimde kimlik verilerinin KVKK kapsamında saklanması, erişim yetkilendirmesi, saklama süresi ve denetim kayıtları ayrıca tasarlanmalıdır.
 
