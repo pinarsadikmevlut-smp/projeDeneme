@@ -1,7 +1,7 @@
 name: pinarGold CI
 on:
   push:
-    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-security-foundation, feature/pinargold-altinkaynak-live]
+    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-security-foundation, feature/pinargold-altinkaynak-live, feature/pinargold-market-reliability]
   pull_request:
     branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-excel-upload-ui]
 jobs:
@@ -28,9 +28,25 @@ jobs:
         with:
           node-version: "22"
       - run: npm install --no-audit --no-fund
+      - run: npm run test
       - run: npm run build
   compose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: POSTGRES_PASSWORD=test-only docker compose config --quiet
+
+  live-upstream-smoke:
+    runs-on: ubuntu-latest
+    # External provider can be unavailable independently of the application tests.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python scripts/smoke_altinkaynak.py

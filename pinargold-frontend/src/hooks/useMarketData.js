@@ -1,7 +1,5 @@
-import { useEffect,useState } from 'react';
+import {useSyncExternalStore} from 'react';
 import {getMarketSnapshot,subscribeMarketData} from '../services/marketData.service';
 export function useMarketData(){
- const [data,setData]=useState(getMarketSnapshot);
- useEffect(()=>subscribeMarketData(setData),[]);
- return data;
+ return useSyncExternalStore(subscribeMarketData,getMarketSnapshot,getMarketSnapshot);
 }

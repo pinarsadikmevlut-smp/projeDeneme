@@ -19,7 +19,7 @@ export default function TopNavbar({dark,onToggleTheme,onOpenSettings}){
  <div className="ml-auto flex items-center gap-1.5">
  <div className="mr-1 hidden text-right sm:block"><div className="text-[9px] font-bold tracking-widest text-emerald-500">● CANLI SAAT</div><time className="font-mono text-xs font-bold" dateTime={now.toISOString()}>{formatTime(now)}</time></div>
  <button className="control" title="Tema değiştir" aria-label="Tema değiştir" onClick={onToggleTheme}><FontAwesomeIcon icon={dark?faSun:faMoon}/></button>
- <button className="control" title="Simülasyon verisini yenile" aria-label="Yenile" onClick={refreshMarketData}><FontAwesomeIcon icon={faRotate}/></button>
+ <button className="control" title="Altınkaynak fiyatlarını yenile" aria-label="Yenile" onClick={refreshMarketData}><FontAwesomeIcon icon={faRotate}/></button>
  <button className="control hidden sm:block" title="Tam ekran" aria-label="Tam ekran" onClick={fullScreen}><FontAwesomeIcon icon={faExpand}/></button>
  <button className="control" onClick={onOpenSettings}><FontAwesomeIcon icon={faSliders}/><span className="ml-2 hidden xl:inline">Ayar & Marj</span></button>
  <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 dark:border-slate-700 xl:flex"><div className="grid h-9 w-9 place-items-center rounded-full bg-gold-500/15 font-outfit font-bold text-gold-600 dark:text-gold-400">MP</div><span className="text-xs font-semibold">Metin Pınar</span></div>

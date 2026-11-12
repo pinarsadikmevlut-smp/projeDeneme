@@ -7,4 +7,6 @@ COPY app ./app
 RUN useradd --create-home appuser
 USER appuser
 EXPOSE 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
+# One process owns the in-memory market poller; threads keep HTTP requests responsive.
+# Multiple replicas require a shared cross-process quote cache and leader election.
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "8", "--timeout", "20", "app:app"]
