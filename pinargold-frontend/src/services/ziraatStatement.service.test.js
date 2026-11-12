@@ -16,7 +16,7 @@ describe('Ziraat Excel / CSV statement import',()=>{
   expect(result.records).toHaveLength(2);
   expect(result.records[0]).toMatchObject({
    date:'01.11.2026',valueDate:'01.11.2026',reference:'A100',
-   firstName:'Ayşe',lastName:'Kaya',tckn:'10000000146',
+   firstName:'Ayşe',lastName:'Kaya',fullName:'Ayşe Kaya',tckn:'10000000146',
    credit:1234.56,debit:0,balance:10000,direction:'in'
   });
   expect(result.records[1].debit).toBe(200.25);
@@ -32,6 +32,8 @@ describe('Ziraat Excel / CSV statement import',()=>{
   expect(parseIdentity('Açıklama','', 'Ali Can Yılmaz')).toMatchObject({firstName:'Ali Can',lastName:'Yılmaz'});
   expect(validTckn('10000000146')).toBe(true);
   expect(maskTckn('10000000146')).toBe('*******0146');
+  expect(parseIdentity('FAST GELEN PARA HASAN ALİ ÖZTÜRK TCKN: 10000000146')).toMatchObject({firstName:'HASAN ALİ',lastName:'ÖZTÜRK',identityReview:true,identitySource:'Açıklama (BÜYÜK HARF)'});
+  expect(parseIdentity('EFT HAVALE BANKA MASRAF ÜCRETİ')).toMatchObject({firstName:'',lastName:''});
  });
  it('recognises one-column signed amounts and numeric/date bank fields',()=>{
   const result=recordsFromMatrix([
@@ -51,6 +53,22 @@ describe('Ziraat Excel / CSV statement import',()=>{
   expect(result.records[0].credit).toBe(100.5);
   const exported=enrichedCsv([{...result.records[0],firstName:'=HYPERLINK',lastName:'Kaya'}]);
   expect(exported).toContain("'=HYPERLINK");
+  expect(exported).toContain('Ad Soyad');
+  expect(exported).toContain('İşlem Tutarı');
+  expect(exported).toContain('İşlem Yönü');
+  expect(exported).not.toContain('Valör');
+  expect(exported).not.toContain('Borç;');
+  expect(exported).not.toContain('Alacak;');
+ });
+ it('detects uppercase names without explicit labels while excluding bank terms',()=>{
+  const row=recordsFromMatrix([
+   ['Tarih','Açıklama','Tutar'],
+   ['01.11.2026','FAST GELEN PARA İSMAİL HAKKI ÇELİK 10000000146','250,00']
+  ]).records[0];
+  expect(row.fullName).toBe('İSMAİL HAKKI ÇELİK');
+  expect(row.tckn).toBe('10000000146');
+  expect(row.identityReview).toBe(true);
+  expect(row.identitySource).toBe('Açıklama (BÜYÜK HARF)');
  });
  it('fails safely when required headers are missing',()=>{
   expect(()=>recordsFromMatrix([['Rapor Başlığı'],['01.11.2026','1.000']])).toThrow(/sütun başlıkları/i);
