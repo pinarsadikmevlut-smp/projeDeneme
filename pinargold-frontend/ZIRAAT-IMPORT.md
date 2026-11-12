@@ -19,13 +19,13 @@ Kaynaklar:
 
 `İşlem Açıklaması` içinde `Gönderen:`, `Alıcı:`, `Adı Soyadı:` gibi **etiketli** kişi bilgilerini ve `TCKN:` / `TC Kimlik No:` sonrası 11 haneli değeri ayırır.
 Ad Soyad tek tabloda gösterilir; ayrıştırma sırasında ilk ad(lar) ve son sözcük soyad olarak ele alınır. Çoklu soyad veya kurum adı otomatik kesin tespit edilemez.
-Etiketsiz 11 haneli değer yalnızca TCKN doğrulama kuralına uyuyorsa alınır; etiketli ancak doğrulaması geçersiz değerler kontrol işaretiyle gösterilir.
+Etiketsiz 11 haneli değer yalnızca TCKN doğrulama kuralına uyuyorsa alınır; kimlik doğrulama sonucu kod tarafında tutulur ancak tabloda durum etiketi gösterilmez.
 Etiket bulunmadığında açıklamadaki **tamamı büyük harfli, iki veya daha fazla sözcüklü kişi adı adayları** ayrıca aranır; FAST, EFT, HAVALE, BANKA gibi işlem ifadeleri dışlanır. Bu yöntemin sonucu **tahmini** olduğundan operatörün gözden geçirmesi gerekir. Güvenilir aday bulunamazsa alan boş kalır.
 Kullanıcı önizlemede Ad Soyad / TCKN hücrelerini elle düzeltebilir. Kullanıcı isteği üzerine **TCKN maskelenmeden** gösterilir.
 
 ## Ekran sütunları
 
-Görüntülenen sütunlar: Muh Tarih, İşlem No, İşlem Açıklaması, Ad Soyad, TCKN, İşlem Tutarı, Bakiye. **Valör sütunu gizlenir** (dosyadan okuma korunur); Borç ve Alacak tek **İşlem Tutarı** sütununda birleştirilir. **Gelen** tutar yeşil, **Giden** tutar kırmızı etiketle gösterilir. CSV dışa aktarımı aynı birleşik düzeni, ayrıca `İşlem Yönü` bilgisini içerir.
+Görüntülenen sütunlar: Muh Tarih, İşlem No, İşlem Açıklaması, Ad Soyad, TCKN, İşlem Tutarı. **Valör ve Bakiye sütunları kaldırılmıştır**; dosyadan okunan değerler ayrıştırıcıda korunur. Borç ve Alacak tek **İşlem Tutarı** sütununda birleştirilir. **Gelen** tutar yeşil, **Giden** tutar kırmızı etiketle gösterilir. CSV dışa aktarımında da Bakiye bulunmaz, `İşlem Yönü` bilgisi bulunur. Ad Soyad ve TCKN hücrelerinin altındaki `Tahmini` ve `Kontrol` etiketleri gösterilmez.
 
 ## Güvenlik ve uyumluluk
 

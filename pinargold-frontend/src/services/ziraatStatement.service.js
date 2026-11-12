@@ -15,7 +15,7 @@ const FIELDS = {
 export const STANDARD_COLUMNS = [
  ['date','MUH. TARİH'],['reference','İŞLEM NO'],
  ['description','İŞLEM AÇIKLAMASI'],['fullName','AD SOYAD'],['tckn','TCKN'],
- ['amount','İŞLEM TUTARI'],['balance','BAKİYE (₺)']
+ ['amount','İŞLEM TUTARI']
 ];
 export const cleanHeader = x => String(x??'').toLocaleLowerCase('tr-TR')
  .replace(/ı/g,'i').replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s')
@@ -247,10 +247,10 @@ function safeCsvCell(v){
  return '"'+text.replace(/"/g,'""')+'"';
 }
 export function enrichedCsv(records,extraHeaders=[]){
- const headers=['Muh Tarih','İşlem No','İşlem Açıklaması','Ad Soyad','TCKN','İşlem Tutarı','İşlem Yönü','Bakiye',...extraHeaders];
+ const headers=['Muh Tarih','İşlem No','İşlem Açıklaması','Ad Soyad','TCKN','İşlem Tutarı','İşlem Yönü',...extraHeaders];
  const rows=records.map(r=>[r.date,r.reference,r.description,
   r.fullName??[r.firstName,r.lastName].filter(Boolean).join(' '),
   r.tckn,r.amount,r.direction==='in'?'Gelen':r.direction==='out'?'Giden':'Belirsiz',
-  r.balance,...extraHeaders.map(h=>r.rawFields[h])]);
+  ...extraHeaders.map(h=>r.rawFields[h])]);
  return '\uFEFF'+[headers,...rows].map(row=>row.map(safeCsvCell).join(';')).join('\r\n');
 }

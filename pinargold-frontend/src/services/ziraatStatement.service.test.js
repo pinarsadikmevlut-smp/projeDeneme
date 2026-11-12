@@ -57,6 +57,7 @@ describe('Ziraat Excel / CSV statement import',()=>{
   expect(exported).toContain('İşlem Tutarı');
   expect(exported).toContain('İşlem Yönü');
   expect(exported).not.toContain('Valör');
+  expect(exported).not.toContain('Bakiye');
   expect(exported).not.toContain('Borç;');
   expect(exported).not.toContain('Alacak;');
  });

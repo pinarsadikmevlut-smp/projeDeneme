@@ -17,7 +17,6 @@
 .excel-identity-input[readonly]{background:#f6f9fc;color:#526b8b}
 .excel-identity-input:focus{outline:2px solid #edc56a;outline-offset:1px}
 .excel-tckn{display:flex;gap:6px;align-items:center}
-.excel-tckn small{font-size:9px;color:#a56c0e;border:1px solid #ead09b;background:#fffaeb;padding:3px 5px;border-radius:5px}
 .excel-export:not(:disabled){background:#fff2d5;color:#8c5a07;cursor:pointer;border-color:#eac17a}
 .dark .excel-import-options{background:#17253a}
 .dark .excel-identity-input{background:#1c2a3e;color:#e1e8f3;border-color:#445977}
@@ -29,9 +28,7 @@
 .excel-table-panel th:nth-child(5){min-width:190px;width:auto}
 .excel-table-panel th:nth-child(6){min-width:190px;width:auto}
 .excel-table-panel th:nth-child(7){min-width:195px;width:auto}
-.excel-table-panel th:nth-child(8){min-width:140px;width:auto}
 .excel-person-cell{display:flex;flex-direction:column;gap:4px;min-width:155px}
-.excel-person-cell small{align-self:flex-start;font-size:10px;font-weight:700;color:#946200}
 .excel-amount{text-align:left!important}
 .excel-amount-badge{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;
  min-width:175px;max-width:100%;padding:8px 10px;border-radius:9px;border:1px solid transparent;
@@ -44,4 +41,3 @@
 .dark .excel-amount-badge.in{background:#153c2c;border-color:#16694c;color:#9aebc7}
 .dark .excel-amount-badge.out{background:#43232d;border-color:#8a3649;color:#ffbdc7}
 .dark .excel-amount-badge.unknown{background:#334155;border-color:#475569;color:#d1d5db}
-.dark .excel-person-cell small{color:#eac880}
