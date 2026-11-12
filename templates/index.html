@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dev Workspace</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="panel">
+    <div class="logo">DW</div>
+    <h1>Dev Workspace</h1>
+    <p>GitHub Codespaces geliştirme ortamına hoş geldiniz.</p>
+    <div class="status">
+      <span class="dot"></span>
+      Uygulama çalışıyor
+    </div>
+    <button onclick="checkAPI()">API Bağlantısını Test Et</button>
+    <p id="result"></p>
+  </main>
+  <script>
+    async function checkAPI() {
+      const result = document.getElementById("result");
+      try {
+        const response = await fetch("/api/health");
+        if (!response.ok) throw new Error("API hatası");
+        const data = await response.json();
+        result.textContent = data.message;
+      } catch (error) {
+        result.textContent = "API bağlantısı başarısız.";
+      }
+    }
+  </script>
+</body>
+</html>
