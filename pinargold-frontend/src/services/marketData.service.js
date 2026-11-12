@@ -1,37 +1,53 @@
-// DEMO: Gerçek borsa kotasyonları değildir. API/WebSocket adaptörü yalnızca burada değiştirilebilir.
-const seed = [
-  ['gram','Gram Altın 24k','Has & Külçe','24k / 1.000',6548,6685],
-  ['has995','Has Altın 0.995','Has & Külçe','0.995',6515,6652],
-  ['has1000','Has Altın 1.000','Has & Külçe','1.000',6548,6685],
-  ['ceyrek','Çeyrek Altın','Ziynet & Ata','22k',10569,10893],
-  ['yarim','Yarım Altın','Ziynet & Ata','22k',21138,21786],
-  ['tam','Tam Altın','Ziynet & Ata','22k',42276,43572],
-  ['bilezik22','22 Ayar Bilezik','İşçilikli','22k / 0.916',6000,6275],
-  ['altin18','18 Ayar Altın','İşçilikli','18k / 0.750',4911,5150],
-  ['altin14','14 Ayar Altın','İşçilikli','14k / 0.585',3830,4040],
-  ['usd','USD/TL','Döviz','USD',50.11,50.29],
-  ['eur','EUR/TL','Döviz','EUR',58.02,58.26]
-];
-let prices = seed.map(([id,name,category,purity,buy,sell])=>({id,name,category,purity,buy,sell,change:0,direction:null,revision:0}));
+import {apiRequest} from './apiClient';
+
 const listeners = new Set();
+const statusListeners = new Set();
+let prices = [];
+let status = {state:'connecting',source:'Altınkaynak',fetchedAt:null,stale:true,error:null};
 let timer = null;
-const emit = () => { const snapshot = prices.map(x=>({...x}));listeners.forEach(fn=>fn(snapshot)); };
-function tick(){
-  prices=prices.map(item=>{
-    if(Math.random()>.48)return item;
-    const delta=(Math.random()-.5)*(item.category==='Döviz'?.025:6);
-    const buy=Math.max(.01,+(item.buy+delta).toFixed(2));
-    const sell=Math.max(buy,+(item.sell+delta).toFixed(2));
-    return {...item,buy,sell,change:+(delta/item.sell*100).toFixed(3),direction:delta>=0?'up':'down',revision:item.revision+1};
+let inFlight = false;
+let controller = null;
+const POLL_MS = 10000;
+
+export const MARKET_DATA_MODE = 'live';
+export const getMarketSnapshot = () => prices.map(item=>({...item}));
+export const getMarketStatus = () => ({...status});
+const publish = () => {
+ const snapshot = getMarketSnapshot();
+ listeners.forEach(fn=>fn(snapshot));
+ statusListeners.forEach(fn=>fn(getMarketStatus()));
+};
+async function poll(){
+ if(inFlight)return;
+ inFlight=true;
+ controller=new AbortController();
+ try {
+  const payload=await apiRequest('/market/prices',{signal:controller.signal});
+  if(!Array.isArray(payload.quotes))throw Error('Geçersiz fiyat yanıtı');
+  const previous=new Map(prices.map(x=>[x.id,x]));
+  prices=payload.quotes.map(item=>{
+   const old=previous.get(item.id);
+   const delta=old?item.sell-old.sell:0;
+   return {...item,change:old&&old.sell?+(delta/old.sell*100).toFixed(3):0,
+    direction:delta>0?'up':delta<0?'down':null,
+    revision:old?(delta!==0||old.buy!==item.buy?old.revision+1:old.revision):0};
   });
-  emit();
+  status={state:payload.stale?'stale':'live',source:payload.source||'Altınkaynak',
+   fetchedAt:payload.fetchedAt,stale:!!payload.stale,error:payload.error||null};
+ }catch(err){
+  if(!controller.signal.aborted)status={...status,state:'error',stale:true,error:'Fiyat servisine ulaşılamıyor'};
+ }finally{inFlight=false;controller=null;publish();}
 }
-export function getMarketSnapshot(){return prices.map(x=>({...x}));}
+function start(){poll();timer=setInterval(poll,POLL_MS);}
+function stop(){clearInterval(timer);timer=null;controller?.abort();}
 export function subscribeMarketData(callback){
-  listeners.add(callback);
-  callback(getMarketSnapshot());
-  if(!timer && typeof window!=='undefined')timer=window.setInterval(tick,2800);
-  return ()=>{listeners.delete(callback);if(!listeners.size && timer){clearInterval(timer);timer=null;}};
+ listeners.add(callback);callback(getMarketSnapshot());
+ if(!timer)start();
+ return ()=>{listeners.delete(callback);if(!listeners.size&&!statusListeners.size)stop();};
 }
-export function refreshMarketData(){tick();}
-export const MARKET_DATA_MODE='simulation';
+export function subscribeMarketStatus(callback){
+ statusListeners.add(callback);callback(getMarketStatus());
+ if(!timer)start();
+ return ()=>{statusListeners.delete(callback);if(!listeners.size&&!statusListeners.size)stop();};
+}
+export function refreshMarketData(){return poll();}
