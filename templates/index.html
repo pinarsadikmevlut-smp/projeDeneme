@@ -1,36 +1,13 @@
-
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dev Workspace</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <main class="panel">
-    <div class="logo">DW</div>
-    <h1>Dev Workspace</h1>
-    <p>GitHub Codespaces geliştirme ortamına hoş geldiniz.</p>
-    <div class="status">
-      <span class="dot"></span>
-      Uygulama çalışıyor
-    </div>
-    <button onclick="checkAPI()">API Bağlantısını Test Et</button>
-    <p id="result"></p>
-  </main>
-  <script>
-    async function checkAPI() {
-      const result = document.getElementById("result");
-      try {
-        const response = await fetch("/api/health");
-        if (!response.ok) throw new Error("API hatası");
-        const data = await response.json();
-        result.textContent = data.message;
-      } catch (error) {
-        result.textContent = "API bağlantısı başarısız.";
-      }
-    }
-  </script>
-</body>
-</html>
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>projeDeneme | Dashboard</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"></head>
+<body><div class="layout"><aside class="sidebar"><a class="brand" href="/"><span class="brand-icon">P</span><span>proje<span class="accent">Deneme</span><small>Developer workspace</small></span></a><div class="nav-caption">ÇALIŞMA ALANI</div><nav><a class="nav-link active" href="/">◫ &nbsp; Genel Bakış</a><a class="nav-link" href="#services">▤ &nbsp; Servisler</a><a class="nav-link" href="#activity">◷ &nbsp; Aktivite</a></nav><div class="sidebar-bottom"><span class="status-dot"></span> Demo arayüz<small>v1.0 · Flask</small></div></aside>
+<div class="main-area"><header class="topbar"><span class="breadcrumb">Workspace <span>/</span> Genel Bakış</span><span class="avatar">PD</span></header><main><div class="heading"><div><span class="eyebrow">GELİŞTİRME ORTAMI</span><h1>Kontrol Paneli <span class="wave">✦</span></h1><p>Uygulamanızı ve servislerinizi tek bir yerden takip edin.</p></div><span class="demo-tag">● Demo görünüm</span></div>
+<section class="hero"><div><span class="hero-kicker">PROJENİZ HAZIR</span><h2>Geliştirmeye güçlü bir başlangıç.</h2><p>Flask uygulamanız için modern bir arayüz. Aşağıdan gerçek API bağlantısını test edebilirsiniz.</p><button id="test-button" type="button">API bağlantısını test et ↗</button></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="cube">⌘</div></div></section><div id="api-result" class="api-result" role="status" aria-live="polite" hidden></div>
+<section id="services"><div class="section-heading"><h2>Servis durumu</h2><span>Canlı kontrol için test düğmesini kullanın</span></div><div class="cards"><article class="service-card"><div class="card-top"><span class="service-icon purple">⌘</span><span class="state neutral" id="flask-status">Kontrol edilmedi</span></div><h3>Flask API</h3><p>Uygulama sağlık kontrolü</p><div class="card-foot"><code>/api/health</code><span>↗</span></div></article><article class="service-card"><div class="card-top"><span class="service-icon blue">▦</span><span class="state neutral" id="db-status">Kontrol edilmedi</span></div><h3>PostgreSQL</h3><p>Veritabanı bağlantı kontrolü</p><div class="card-foot"><code>/api/health/db</code><span>↗</span></div></article><article class="service-card"><div class="card-top"><span class="service-icon orange">⚙</span><span class="state neutral">Yapılandırıldı</span></div><h3>GitHub Actions</h3><p>CI workflow dosyası mevcut; çalışma sonucu burada izlenmiyor</p><div class="card-foot"><code>.github/workflows/ci.yml</code><span>↗</span></div></article></div></section>
+<section id="activity" class="activity"><div class="section-heading"><h2>Hızlı başlangıç</h2><span>Geliştirici rehberi</span></div><div class="steps"><div><span class="step-number">01</span><span><strong>API testini çalıştır</strong><small>Flask ve veritabanı endpoint'lerini sorgula</small></span></div><div><span class="step-number">02</span><span><strong>Compose servislerini başlat</strong><small>docker compose up -d --build</small></span></div><div><span class="step-number">03</span><span><strong>Testleri doğrula</strong><small>python -m pytest -v</small></span></div></div></section></main><footer>© 2026 projeDeneme <span>Örnek kontrol paneli · Gerçek zamanlı metrik içermez</span></footer></div></div>
+<script>
+const button=document.getElementById('test-button'),result=document.getElementById('api-result');
+function setState(id,ok){const el=document.getElementById(id);el.textContent=ok?'Bağlı':'Bağlantı yok';el.className='state '+(ok?'success':'failure')}
+async function check(path){try{const r=await fetch(path,{cache:'no-store'}),d=await r.json();return r.ok&&d.status==='OK'}catch{return false}}
+button.addEventListener('click',async()=>{button.disabled=true;button.textContent='Kontrol ediliyor…';const [api,db]=await Promise.all([check('/api/health'),check('/api/health/db')]);setState('flask-status',api);setState('db-status',db);result.hidden=false;result.textContent='Flask API: '+(api?'başarılı':'başarısız')+' · PostgreSQL: '+(db?'başarılı':'bağlantı yok');button.disabled=false;button.textContent='Yeniden test et ↗'});
+</script></body></html>
