@@ -1,53 +1,99 @@
 import {apiRequest} from './apiClient';
+import {reconcileQuotes,deriveMarketStatus} from './marketState';
 
-const listeners = new Set();
-const statusListeners = new Set();
-let prices = [];
-let status = {state:'connecting',source:'Altınkaynak',fetchedAt:null,stale:true,error:null};
-let timer = null;
-let inFlight = false;
-let controller = null;
-const POLL_MS = 10000;
+// Only one timer and in-flight request regardless of the number of mounted components.
+const POLL_MS=10000;
+const WARMUP_MS=1000;
+const quoteListeners=new Set(),statusListeners=new Set();
+let prices=[];
+let status={state:'warming',source:'Altınkaynak',stale:true,staleCount:0,
+ quoteCount:0,fetchedAt:null,checkedAt:null,intervalSeconds:10,feedStatus:{},error:null};
+let timer=null,controller=null,active=false,generation=0,requestPromise=null;
 
-export const MARKET_DATA_MODE = 'live';
-export const getMarketSnapshot = () => prices.map(item=>({...item}));
-export const getMarketStatus = () => ({...status});
-const publish = () => {
- const snapshot = getMarketSnapshot();
- listeners.forEach(fn=>fn(snapshot));
- statusListeners.forEach(fn=>fn(getMarketStatus()));
-};
-async function poll(){
- if(inFlight)return;
- inFlight=true;
- controller=new AbortController();
- try {
-  const payload=await apiRequest('/market/prices',{signal:controller.signal});
-  if(!Array.isArray(payload.quotes))throw Error('Geçersiz fiyat yanıtı');
-  const previous=new Map(prices.map(x=>[x.id,x]));
-  prices=payload.quotes.map(item=>{
-   const old=previous.get(item.id);
-   const delta=old?item.sell-old.sell:0;
-   return {...item,change:old&&old.sell?+(delta/old.sell*100).toFixed(3):0,
-    direction:delta>0?'up':delta<0?'down':null,
-    revision:old?(delta!==0||old.buy!==item.buy?old.revision+1:old.revision):0};
-  });
-  status={state:payload.stale?'stale':'live',source:payload.source||'Altınkaynak',
-   fetchedAt:payload.fetchedAt,stale:!!payload.stale,error:payload.error||null};
- }catch(err){
-  if(!controller.signal.aborted)status={...status,state:'error',stale:true,error:'Fiyat servisine ulaşılamıyor'};
- }finally{inFlight=false;controller=null;publish();}
+export const MARKET_DATA_MODE='live';
+export const getMarketSnapshot=()=>prices;
+export const getMarketStatus=()=>status;
+const emitQuotes=()=>quoteListeners.forEach(fn=>fn());
+const emitStatus=()=>statusListeners.forEach(fn=>fn());
+
+async function poll(gen){
+ if(!active||gen!==generation||requestPromise)return;
+ const started=performance.now();
+ const requestController=new AbortController();
+ controller=requestController;
+ let delay=POLL_MS;
+ const running=(async()=>{
+  try{
+   const payload=await apiRequest('/market/prices',{signal:requestController.signal});
+   if(gen!==generation||!active)return;
+   if(!payload||!Array.isArray(payload.quotes))throw Error('Invalid market API response');
+   const next=reconcileQuotes(prices,payload.quotes);
+   if(next!==prices){prices=next;emitQuotes();}
+   status=deriveMarketStatus(payload,status);
+   emitStatus();
+   if(!prices.length&&payload.state==='warming')delay=WARMUP_MS;
+  }catch(error){
+   if(gen!==generation||!active||requestController.signal.aborted)return;
+   status={...status,state:'error',stale:true,error:'Fiyat servisine ulaşılamıyor'};
+   if(prices.length){
+    const marked=prices.map(q=>q.stale?q:{...q,stale:true});
+    if(marked.some((q,i)=>q!==prices[i])){prices=marked;emitQuotes();}
+   }
+   emitStatus();
+  }
+ })();
+ requestPromise=running;
+ try{await running;}
+ finally{
+  if(controller===requestController)controller=null;
+  if(requestPromise===running)requestPromise=null;
+  if(gen===generation&&active){
+   const elapsed=performance.now()-started;
+   // Anchor to a 10s start-to-start cadence when the request is fast.
+   // When a request runs longer, never overlap or issue a catch-up burst.
+   const wait=delay===POLL_MS ? (elapsed<POLL_MS?POLL_MS-elapsed:POLL_MS) : delay;
+   timer=setTimeout(()=>{timer=null;void poll(gen);},wait);
+  }
+ }
 }
-function start(){poll();timer=setInterval(poll,POLL_MS);}
-function stop(){clearInterval(timer);timer=null;controller?.abort();}
-export function subscribeMarketData(callback){
- listeners.add(callback);callback(getMarketSnapshot());
- if(!timer)start();
- return ()=>{listeners.delete(callback);if(!listeners.size&&!statusListeners.size)stop();};
+
+function resume(){
+ if(!active||controller)return;
+ clearTimeout(timer);timer=null;
+ void poll(generation);
 }
-export function subscribeMarketStatus(callback){
- statusListeners.add(callback);callback(getMarketStatus());
- if(!timer)start();
- return ()=>{statusListeners.delete(callback);if(!listeners.size&&!statusListeners.size)stop();};
+function onVisibility(){
+ if(typeof document!=='undefined'&&document.visibilityState==='visible')resume();
 }
-export function refreshMarketData(){return poll();}
+function start(){
+ if(active)return;
+ active=true;generation++;
+ if(typeof window!=='undefined'){
+  window.addEventListener('online',resume);
+  document?.addEventListener('visibilitychange',onVisibility);
+ }
+ void poll(generation);
+}
+function stop(){
+ if(!active)return;
+ active=false;generation++;
+ clearTimeout(timer);timer=null;
+ controller?.abort();controller=null;requestPromise=null;
+ if(typeof window!=='undefined'){
+  window.removeEventListener('online',resume);
+  document?.removeEventListener('visibilitychange',onVisibility);
+ }
+}
+function subscribe(set,listener){
+ set.add(listener);
+ if(!active)start();
+ return ()=>{set.delete(listener);if(!quoteListeners.size&&!statusListeners.size)stop();};
+}
+export const subscribeMarketData=listener=>subscribe(quoteListeners,listener);
+export const subscribeMarketStatus=listener=>subscribe(statusListeners,listener);
+export function refreshMarketData(){
+ if(!active)start();
+ if(controller)return requestPromise;
+ resume();
+ return requestPromise;
+}
