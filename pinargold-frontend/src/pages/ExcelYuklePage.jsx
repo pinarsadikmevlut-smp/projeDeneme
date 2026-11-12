@@ -1,0 +1,1 @@
+import ModulePlaceholder from '../components/layout/ModulePlaceholder';export default function ExcelYuklePage(){return <ModulePlaceholder title="Excel Yükle" description="Excel üzerinden fatura içe aktarma ekranının başlangıç modülü."/>;}

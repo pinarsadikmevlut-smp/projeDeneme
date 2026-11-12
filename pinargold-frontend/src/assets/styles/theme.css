@@ -1,0 +1,11 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+:root{font-family:'Plus Jakarta Sans',sans-serif;font-synthesis:none}html{scroll-behavior:smooth}body{margin:0}body.dark{background:#0B0F17;color:#e2e8f0}body:not(.dark){background:#f8fafc;color:#0f172a}
+@layer components{
+ .glass-panel{@apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:backdrop-blur-md dark:shadow-none}
+ .gold-gradient-text{background:linear-gradient(135deg,#FFF1C5 0%,#D4AF37 50%,#9A7B1C 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+ .gold-btn-gradient{background:linear-gradient(135deg,#D4AF37 0%,#A37F15 100%);color:#10141b}
+ .control{@apply rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-gold-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200}
+ .muted{@apply text-slate-500 dark:text-slate-400}
+}
+.ticker-track{display:flex;width:max-content;animation:marquee 45s linear infinite}.ticker-track:hover{animation-play-state:paused}@keyframes marquee{to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}

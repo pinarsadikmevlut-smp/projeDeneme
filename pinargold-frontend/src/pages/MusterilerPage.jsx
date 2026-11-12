@@ -1,0 +1,1 @@
+import ModulePlaceholder from '../components/layout/ModulePlaceholder';export default function MusterilerPage(){return <ModulePlaceholder title="Müşteriler" description="Müşteri kayıtları modülü. Menüdeki 539 sayısı yalnızca örnek gösterimdir; gerçek kayıtlar henüz bağlı değildir."/>;}

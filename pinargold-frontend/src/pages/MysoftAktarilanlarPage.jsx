@@ -1,0 +1,1 @@
+import ModulePlaceholder from '../components/layout/ModulePlaceholder';export default function MysoftAktarilanlarPage(){return <ModulePlaceholder title="Mysoft Aktarılanlar" description="Mysoft entegrasyon kayıtlarının listeleneceği başlangıç modülü."/>;}
