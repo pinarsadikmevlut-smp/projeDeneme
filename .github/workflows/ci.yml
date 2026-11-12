@@ -1,9 +1,9 @@
 name: pinarGold CI
 on:
   push:
-    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-security-foundation, feature/pinargold-altinkaynak-live, feature/pinargold-market-reliability]
+    branches: [main, 'feature/**']
   pull_request:
-    branches: [main, feature/goldensoft-initial, feature/pinargold-modular-frontend, feature/pinargold-excel-upload-ui]
+    branches: [main, 'feature/**']
 jobs:
   backend:
     runs-on: ubuntu-latest
