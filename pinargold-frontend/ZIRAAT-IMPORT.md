@@ -29,7 +29,7 @@ Görüntülenen sütunlar: Muh Tarih, İşlem No, İşlem Açıklaması, Ad Soya
 
 ## Güvenlik ve uyumluluk
 
-Excel ve CSV **tarayıcıda** okunur; sunucuya dosya gönderilmez, otomatik muhasebe veya müşteri kaydı oluşturulmaz.
+Excel ve CSV **tarayıcıda** okunur; sunucuya tam banka ekstresi gönderilmez. Ancak **müşteri yönetimi için yetkili oturum açıkken** geçerli Ad Soyad/TCKN çiftleri `/api/customers/import` üzerinden PostgreSQL'e **kalıcı kaydedilir**. Oturum açık değilken yalnızca yerel önizleme yapılır. Otomatik muhasebe/fatura kaydı oluşturulmaz.
 Önizleme ve indirilen yerel CSV dosyası TCKN'nin tam değerini içerir; ekranın üçüncü kişilerce görülmesi ve dosyanın paylaşılması konusunda özel dikkat gereklidir. Yalnızca yetkili kullanıcılarca güvenli şekilde saklanmalıdır.
 CSV formül enjeksiyonuna karşı şüpheli hücre başlangıçları Excel için metin olarak kaçışlanır.
 Üretimde kimlik verilerinin KVKK kapsamında saklanması, erişim yetkilendirmesi, saklama süresi ve denetim kayıtları ayrıca tasarlanmalıdır.

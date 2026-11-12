@@ -102,7 +102,7 @@ export default function ExcelYuklePage(){
   </header>
   {error&&<div role="alert" className="excel-error">{error}</div>}
   {syncStatus&&<div role="status" className="excel-file-info">{syncStatus}</div>}
-  {filename&&<div className="excel-file-info" role="status">Ziraat önizleme: <strong>{filename}</strong> · {records.length} hareket · {extraHeaders.length} ek kaynak sütunu · Veriler yalnızca tarayıcı belleğinde tutulur.</div>}
+  {filename&&<div className="excel-file-info" role="status">Ziraat önizleme: <strong>{filename}</strong> · {records.length} hareket · {extraHeaders.length} ek kaynak sütunu · Tam ekstre tarayıcıda işlenir; yetkili oturumda müşteri kimlikleri PostgreSQL'e aktarılır.</div>}
   <section className="excel-stats" aria-label="Hareket özeti">
    <div className="excel-stat"><span className="excel-stat-icon amber">≡</span><div><span>Okunan hareket</span><strong>{records.length}</strong></div></div>
    <div className="excel-stat"><span className="excel-stat-icon green">↗</span><div><span>Toplam alacak (giriş)</span><strong>{currency(incoming)}</strong></div></div>
@@ -117,7 +117,7 @@ export default function ExcelYuklePage(){
     </div>
     <div className="excel-table-tools"><label className="excel-search"><span>○</span><input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="TCKN, ad soyad veya işlem no ara..." aria-label="Hareket ara"/></label><label className="excel-page-size">Sayfada <select value={perPage} onChange={e=>{setPerPage(Number(e.target.value));setPage(1)}}><option value="10">10</option><option value="25">25</option><option value="50">50</option></select> satır</label></div>
    </div>
-   <div className="excel-import-options"><label><input type="checkbox" checked={showExtras} onChange={e=>setShowExtras(e.target.checked)}/> Diğer kaynak sütunları ({extraHeaders.length})</label><span>Ad Soyad tek sütunda, TCKN açık gösterilir. Açıklamadan çıkarılan kişi bilgilerini işlem öncesinde doğrulayın; veriler yalnızca tarayıcı belleğinde tutulur.</span></div>
+   <div className="excel-import-options"><label><input type="checkbox" checked={showExtras} onChange={e=>setShowExtras(e.target.checked)}/> Diğer kaynak sütunları ({extraHeaders.length})</label><span>Ad Soyad tek sütunda, TCKN açık gösterilir. Kimlik alanlarını doğrulayın. Yetkili oturum açıkken geçerli Ad Soyad/TCKN çiftleri PostgreSQL'e kaydedilir.</span></div>
    <div className="excel-table-scroll"><table><thead><tr><th><input type="checkbox" aria-label="Sayfadaki hareketleri seç" checked={allSelected} onChange={toggleAll}/></th>{STANDARD_COLUMNS.map(([key,label])=><th key={key}><button onClick={()=>changeSort(key)}>{label} <span>{sort.key===key?(sort.desc?'↓':'↑'):'↕'}</span></button></th>)}{showExtras&&extraHeaders.map(header=><th key={header}>{header}</th>)}</tr></thead>
    <tbody>{shown.map(r=><tr key={r.id}><td><input type="checkbox" aria-label={(r.reference||'Hareket '+r.id)+' seç'} checked={selected.includes(r.id)} onChange={()=>toggleOne(r.id)}/></td>
     <td>{r.date}</td><td>{r.reference||'—'}</td><td className="excel-description" title={r.description}>{r.description}</td>
