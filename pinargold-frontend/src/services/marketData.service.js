@@ -18,7 +18,7 @@ const emitStatus=()=>statusListeners.forEach(fn=>fn());
 
 async function poll(gen){
  if(!active||gen!==generation||requestPromise)return;
- const started=performance.now();
+ const started=Date.now();
  const requestController=new AbortController();
  controller=requestController;
  let delay=POLL_MS;
@@ -48,7 +48,7 @@ async function poll(gen){
   if(controller===requestController)controller=null;
   if(requestPromise===running)requestPromise=null;
   if(gen===generation&&active){
-   const elapsed=performance.now()-started;
+   const elapsed=Date.now()-started;
    // Anchor to a 10s start-to-start cadence when the request is fast.
    // When a request runs longer, never overlap or issue a catch-up burst.
    const wait=delay===POLL_MS ? (elapsed<POLL_MS?POLL_MS-elapsed:POLL_MS) : delay;
