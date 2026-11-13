@@ -148,6 +148,12 @@ def register():
     missing = require_config()
     if missing:
         return missing
+    ip = request.remote_addr or "unknown"
+    with FAILURES_LOCK:
+        recent = [t for t in FAILURES.get("register:" + ip, []) if time.monotonic() - t < 3600]
+        FAILURES["register:" + ip] = recent
+        if len(recent) >= 10:
+            return jsonify(error="rate_limited", message="Çok fazla kayıt denemesi."), 429
     data = credentials()
     if not data or not 12 <= len(data[1]) <= 128 or len(data[1].encode('utf-8')) > 72:
         return jsonify(error="invalid_credentials", message="Kullanıcı adı 3-40 karakter; şifre 12-72 UTF-8 bayt olmalı."), 400
