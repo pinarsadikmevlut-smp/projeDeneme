@@ -202,6 +202,10 @@ export default function BankaFaturaPage(){
    </div>
    <div className="bank-bulk-bar">
     <strong>{selectedIds.length} hareket seçildi</strong>
+    <button className="inv-outline" type="button" disabled={!filtered.length||transferBusy}
+     onClick={()=>setSelectedIds(filtered.filter(row=>importResults[row.id]?.status!=='created').map(row=>row.id))}>
+     Tüm filtrelenmişleri seç ({filtered.length})
+    </button>
     <button className="inv-primary bank-import-trigger" disabled={!selectedIds.length||templatesBusy||transferBusy}
      onClick={openModal}>⇧ Seçilileri Taslağa Aktar</button>
     {selectedIds.length>0&&<button className="bank-clear" onClick={()=>setSelectedIds([])}>Seçimi temizle</button>}
@@ -217,7 +221,7 @@ export default function BankaFaturaPage(){
       <th className="bank-identity-column">TCKN / VKN</th>
       <th className="bank-amount-column">İŞLEM TUTARI</th>
       <th className="bank-document-column">FATURA TİPİ</th>
-      <th className="bank-actions-column">İŞLEM</th>
+      <th className="bank-actions-column">İŞLEMLER</th>
      </tr></thead>
      <tbody>{activeRows.map(row=>{
       const chosen=templates.find(t=>t.id===documents[row.id]);

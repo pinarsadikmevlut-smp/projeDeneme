@@ -68,7 +68,7 @@ describe('Banka Hareketleri önizlemesi ve taslak aktarımı',()=>{
   renderPage();
   await importFile();
   for(const title of ['TARİH / SAAT','BANKA / YÖN','AD SOYAD / AÇIKLAMA','TCKN / VKN',
-    'İŞLEM TUTARI','FATURA TİPİ','İŞLEM']){
+    'İŞLEM TUTARI','FATURA TİPİ','İŞLEMLER']){
    expect(screen.getByText(title)).toBeTruthy();
   }
   expect(screen.getByText('*******0146')).toBeTruthy();
@@ -97,7 +97,7 @@ describe('Banka Hareketleri önizlemesi ve taslak aktarımı',()=>{
  });
  it('opens searchable modal for bulk transfer and reports incompatible or unmatched rows',async()=>{
   renderPage();await importFile();
-  fireEvent.click(screen.getByLabelText('Sayfadaki tüm hareketleri seç'));
+  fireEvent.click(screen.getByRole('button',{name:'Tüm filtrelenmişleri seç (2)'}));
   expect(screen.getByLabelText('Hareket seç 1').checked).toBe(true);
   expect(screen.getByLabelText('Hareket seç 2').checked).toBe(true);
   fireEvent.click(screen.getByRole('button',{name:/Seçilileri Taslağa Aktar/}));
@@ -116,6 +116,21 @@ describe('Banka Hareketleri önizlemesi ve taslak aktarımı',()=>{
   expect(await screen.findByText(/1 taslak kaydedildi; 1 hareket kontrol bekliyor/)).toBeTruthy();
   expect(screen.getByText(/VKN kaydı için kurumsal cari desteği henüz yok/)).toBeTruthy();
   expect(screen.queryByRole('dialog',{name:'Toplu taslak aktarımı'})).toBeNull();
+ });
+ it('selects all filtered items across pagination and chunks bulk requests to 25',async()=>{
+  const thirty=Array.from({length:30},(_,i)=>({...sampleRows[0],id:i+1,reference:'TEST-FAST-'+(i+1)}));
+  loadZiraatFile.mockResolvedValueOnce({records:thirty,extraHeaders:[]});
+  renderPage();
+  await importFile();
+  fireEvent.click(screen.getByRole('button',{name:'Tüm filtrelenmişleri seç (30)'}));
+  expect(screen.getByText('30 hareket seçildi')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:/Seçilileri Taslağa Aktar/}));
+  expect(screen.getByRole('dialog',{name:'Toplu taslak aktarımı'})).toBeTruthy();
+  fireEvent.click(screen.getAllByRole('radio',{name:/Altın Satışı/})[0]);
+  fireEvent.click(screen.getByRole('button',{name:'30 hareketi taslağa aktar'}));
+  await waitFor(()=>expect(apiRequest.mock.calls.filter(call=>call[0]==='/invoices/bank-import').length).toBe(2));
+  const sent=apiRequest.mock.calls.filter(call=>call[0]==='/invoices/bank-import').map(call=>call[1].body.records.length);
+  expect(sent).toEqual([25,5]);
  });
  it('offers detail, local edit, local deletion, filter and sorting without backend mutations',async()=>{
   renderPage();await importFile();
