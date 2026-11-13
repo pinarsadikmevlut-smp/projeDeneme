@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,cleanup} from '@testing-library/react';
+import {MemoryRouter} from 'react-router-dom';
 
 const store=vi.hoisted(()=>({quotes:[],status:{state:'live'}}));
 vi.mock('../hooks/useMarketData',()=>({useMarketData:()=>store.quotes}));
@@ -16,7 +17,7 @@ afterEach(cleanup);
 
 describe('Satış Yap — yalnızca demo',()=>{
  it('ürün araması ve sepet miktar/toplam hesabı çalışır',()=>{
-  render(<SatisYapPage/>);
+  render(<MemoryRouter><SatisYapPage/></MemoryRouter>);
   expect(screen.getByText('PNR-GRM')).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:'Gram Altın sepete ekle'}));
   expect(screen.getByRole('spinbutton',{name:'Gram Altın miktar'}).value).toBe('1');
@@ -29,7 +30,7 @@ describe('Satış Yap — yalnızca demo',()=>{
  });
  it('eski fiyat ve bağlantı sorunu sırasında sepete ekleme yapılamaz',()=>{
   store.quotes=[gram(true)];store.status={state:'stale'};
-  render(<SatisYapPage/>);
+  render(<MemoryRouter><SatisYapPage/></MemoryRouter>);
   const button=screen.getByRole('button',{name:'Gram Altın sepete ekle'});
   expect(button.disabled).toBe(true);
   fireEvent.click(button);
@@ -38,13 +39,13 @@ describe('Satış Yap — yalnızca demo',()=>{
  });
  it('servis henüz başlamadıysa açıklayıcı boş durum gösterir',()=>{
   store.quotes=[];store.status={state:'warming'};
-  render(<SatisYapPage/>);
+  render(<MemoryRouter><SatisYapPage/></MemoryRouter>);
   expect(screen.getByText('Fiyatlar bekleniyor. Backend bağlantısını kontrol edin.')).toBeTruthy();
  });
  it('kısmi kaynak kesintisinde güncel ürün eklenebilir, eski ürün eklenemez',()=>{
   store.quotes=[gram(false),{...gram(true),id:'ceyrek',name:'Çeyrek Altın',sell:10893}];
   store.status={state:'partial'};
-  render(<SatisYapPage/>);
+  render(<MemoryRouter><SatisYapPage/></MemoryRouter>);
   expect(screen.getByRole('button',{name:'Gram Altın sepete ekle'}).disabled).toBe(false);
   expect(screen.getByRole('button',{name:'Çeyrek Altın sepete ekle'}).disabled).toBe(true);
  });

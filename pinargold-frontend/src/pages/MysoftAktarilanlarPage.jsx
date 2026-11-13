@@ -1,1 +1,2 @@
-import ModulePlaceholder from '../components/layout/ModulePlaceholder';export default function MysoftAktarilanlarPage(){return <ModulePlaceholder title="Mysoft Aktarılanlar" description="Mysoft entegrasyon kayıtlarının listeleneceği başlangıç modülü."/>;}
+import InvoiceQueuePage from './InvoiceQueuePage';
+export default function MysoftAktarilanlarPage(){return <InvoiceQueuePage mode="transfer"/>;}

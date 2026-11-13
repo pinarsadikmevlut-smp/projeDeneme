@@ -1,1 +1,2 @@
-import ModulePlaceholder from '../components/layout/ModulePlaceholder';export default function TaslakFaturaPage(){return <ModulePlaceholder title="Taslak Faturalar" description="Taslak faturaları görüntüleme ve düzenleme ekranının başlangıç modülü."/>;}
+import InvoiceQueuePage from './InvoiceQueuePage';
+export default function TaslakFaturaPage(){return <InvoiceQueuePage mode="drafts"/>;}
