@@ -1,13 +1,11 @@
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {Link,useNavigate} from 'react-router-dom';
 import {loadZiraatFile,maskTckn} from '../services/ziraatStatement.service';
+import {apiRequest} from '../services/apiClient';
+import BankTemplateModal from '../components/bank/BankTemplateModal';
+import BankRowEditModal from '../components/bank/BankRowEditModal';
 import './InvoiceWorkflow.css';
 
-export const BANK_DOCUMENT_TEMPLATES=[
- {value:'e-arsiv',label:'Fatura · e-Arşiv',short:'Fatura',icon:'ϟ',tone:'invoice'},
- {value:'e-fatura',label:'Fatura · e-Fatura',short:'Fatura',icon:'ϟ',tone:'invoice'},
- {value:'g-pusulasi',label:'G.P. · Gider Pusulası',short:'G.P.',icon:'▣',tone:'voucher'}
-];
 const trMoney=value=>Number(value||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';
 const norm=value=>String(value??'').toLocaleLowerCase('tr-TR').replace(/\s+/g,' ').trim();
 const months=['','Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
@@ -25,7 +23,19 @@ function dateParts(value){
  const iso=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
  return {iso:iso?.[0]||'',sort:iso?.[0]?.replace(/-/g,'')||'',label:raw||'—'};
 }
-const redact=value=>String(value||'').replace(/(?<!\d)[1-9]\d{6}(\d{4})(?!\d)/g,'*******$1');
+const redact=value=>String(value||'').replace(/(?<!\d)(?:[1-9]\d{6}|\d{6})(\d{4})(?!\d)/g,'******$1');
+const maskId=value=>value?('*'.repeat(Math.max(0,String(value).length-4))+String(value).slice(-4)):'—';
+const reasonText={
+ customer_not_found:'Cari eşleşmedi: önce Müşteri Listesi üzerinden kayıt oluşturun.',
+ invalid_identity:'Geçerli TCKN bulunamadı; müşteri kontrolü gerekli.',
+ corporate_customer_unavailable:'VKN kaydı için kurumsal cari desteği henüz yok.',
+ direction_mismatch:'Bu şablon gelen/giden yönüyle eşleşmiyor.',
+ invalid_amount:'Tutar geçersiz; satırı düzenleyin.',
+ missing_reference:'İşlem referansı eksik; satırı düzenleyin.',
+ invalid_date:'İşlem tarihi geçersiz; satırı düzenleyin.',
+ already_imported:'Bu hareket önceden taslağa aktarıldı.',
+ invalid_row:'Satır bilgileri eksik.'
+};
 
 export default function BankaFaturaPage(){
  const navigate=useNavigate();
@@ -35,7 +45,23 @@ export default function BankaFaturaPage(){
  const [startDate,setStartDate]=useState(''),[endDate,setEndDate]=useState('');
  const [sortDesc,setSortDesc]=useState(true),[page,setPage]=useState(1);
  const [selectedIds,setSelectedIds]=useState([]),[documents,setDocuments]=useState({});
- const [bulkType,setBulkType]=useState(''),[detailId,setDetailId]=useState(null);
+ const [templates,setTemplates]=useState([]);
+ const [templatesBusy,setTemplatesBusy]=useState(true);
+ const [detailId,setDetailId]=useState(null);
+ const [editId,setEditId]=useState(null);
+ const [modalIds,setModalIds]=useState(null);
+ const [transferBusy,setTransferBusy]=useState(false);
+ const [importResults,setImportResults]=useState({});
+ useEffect(()=>{
+  let active=true;
+  apiRequest('/invoices/templates').then(result=>{
+   if(active)setTemplates(result.templates||[]);
+  }).catch(error=>{
+   if(active)setError('Fatura şablonları yüklenemedi: '+error.message);
+  }).finally(()=>{if(active)setTemplatesBusy(false);});
+  return ()=>{active=false};
+ },[]);
+
  const counts=useMemo(()=>({
   in:rows.filter(r=>r.direction==='in').length,
   out:rows.filter(r=>r.direction==='out').length,
@@ -48,7 +74,7 @@ export default function BankaFaturaPage(){
   const date=dateParts(row.date).iso;
   if(startDate&&(!date||date<startDate))return false;
   if(endDate&&(!date||date>endDate))return false;
-  return !search||[row.fullName,row.description,row.reference,row.tckn,...Object.values(row.rawFields||{})]
+  return !search||[row.fullName,row.description,row.reference,row.tckn,row.vkn,...Object.values(row.rawFields||{})]
    .some(value=>norm(value).includes(norm(search)));
  }).sort((a,b)=>{
   const comparison=dateParts(a.date).sort.localeCompare(dateParts(b.date).sort)||a.id-b.id;
@@ -65,22 +91,59 @@ export default function BankaFaturaPage(){
  const togglePage=()=>setSelectedIds(old=>allSelected?old.filter(id=>!activeRows.some(r=>r.id===id)):
   [...new Set([...old,...activeRows.map(r=>r.id)])]);
  const choose=(id,value)=>{setDocuments(old=>({...old,[id]:value}));setNotice('');};
- const applyBulk=()=>{
-  if(!bulkType||!selectedIds.length)return;
-  setDocuments(old=>({...old,...Object.fromEntries(selectedIds.map(id=>[id,bulkType]))}));
-  setNotice(selectedIds.length+' hareket için belge şablonu seçildi. Her satırın devam düğmesiyle sürece geçebilirsiniz.');
+ const resetRow=id=>{
+  setImportResults(old=>{const copy={...old};delete copy[id];return copy;});
  };
- const proceed=row=>{
-  const documentType=documents[row.id];
-  if(!BANK_DOCUMENT_TEMPLATES.some(t=>t.value===documentType)){
-   setError('Önce Belge sütunundan şablon seçmelisiniz.');return;
+ const removeRow=id=>{
+  setRows(old=>old.filter(row=>row.id!==id));
+  setSelectedIds(old=>old.filter(item=>item!==id));
+  setDocuments(old=>{const copy={...old};delete copy[id];return copy;});
+  resetRow(id);
+  setNotice('Satır yalnızca önizlemeden kaldırıldı. Banka dosyası veya PostgreSQL taslakları silinmedi.');
+ };
+ const editRow=row=>{
+  setRows(old=>old.map(item=>item.id===row.id?row:item));
+  resetRow(row.id);
+  setEditId(null);
+  setNotice('Önizleme güncellendi. Cari eşleşmesi ve fatura kuralları kaydederken tekrar kontrol edilecek.');
+ };
+ const submitRows=async(selected,templateId)=>{
+  const template=templates.find(item=>item.id===templateId);
+  if(!template){setError('Önce geçerli bir fatura şablonu seçin.');return;}
+  if(transferBusy||!selected.length)return;
+  setTransferBusy(true);setError('');setNotice('');
+  let created=0,skipped=0;
+  try{
+   for(let i=0;i<selected.length;i+=25){
+    const group=selected.slice(i,i+25);
+    const response=await apiRequest('/invoices/bank-import',{method:'POST',body:{
+     templateId,records:group.map(row=>({
+      rowId:row.id,reference:row.reference,date:row.date,
+      amount:row.amount,direction:row.direction,
+      tckn:row.tckn||'',vkn:row.vkn||''
+     }))
+    }});
+    created+=response.created||0;skipped+=response.skipped||0;
+    setImportResults(old=>({...old,...Object.fromEntries((response.results||[])
+      .map(result=>[result.rowId,result]))}));
+   }
+   setSelectedIds(old=>old.filter(id=>!selected.some(row=>row.id===id)));
+   setNotice(created+' taslak kaydedildi; '+skipped+' hareket kontrol bekliyor veya önceden aktarıldı. Sonuçlar satırlarda gösterildi.');
+  }catch(err){
+   setError('Aktarım sırasında hata: '+err.message+'. Başarılı satırlar kaydedildi; tekrar deneyebilirsiniz.');
+  }finally{
+   setTransferBusy(false);setModalIds(null);
   }
-  setError('');
-  // Send only a transient reference/amount/template; statement and identity remain local.
-  navigate('/fatura-olustur',{state:{bank:{
-   reference:row.reference||'',amount:row.amount,direction:row.direction,documentType,
-   bankName:'Ziraat Bankası'
-  }}});
+ };
+ const quickTransfer=row=>{
+  const templateId=documents[row.id];
+  if(!templateId){setError('Hızlı aktarım için önce Fatura Tipi seçin.');return;}
+  return submitRows([row],templateId);
+ };
+ const openModal=()=>{
+  const available=rows.filter(row=>selectedIds.includes(row.id)&&importResults[row.id]?.status!=='created');
+  if(!available.length){setError('Aktarım için önce taslağa aktarılmamış hareket seçin.');return;}
+  setModalIds(available.map(row=>row.id));
  };
  async function upload(e){
   const file=e.target.files?.[0];e.target.value='';if(!file)return;
@@ -88,16 +151,16 @@ export default function BankaFaturaPage(){
   try{
    const loaded=await loadZiraatFile(file);
    setRows(loaded.records);setFilename(file.name);
-   resetFilters();setDocuments({});setBulkType('');setDetailId(null);
+   resetFilters();setDocuments({});setImportResults({});setModalIds(null);setEditId(null);setDetailId(null);
    setNotice(loaded.records.length+' hareket okundu. Belge sütunundan şablon seçerek işleme başlayabilirsiniz.');
   }catch(err){setRows([]);setFilename('');setSelectedIds([]);setDocuments({});
-   setError(err.message||'Ekstre okunamadı.');
+   setImportResults({});setError(err.message||'Ekstre okunamadı.');
   }finally{setBusy(false);}
  }
  return <div className="inv-page bank-page">
   <header className="inv-head">
    <div><div className="inv-overline">PINARGOLD · BANKA → BELGE</div><h1>Banka hareketleri</h1>
-    <p>Ekstreyi yükleyin, belge şablonunu satır üzerinde seçin ve taslak işlemine devam edin.</p></div>
+    <p>Ekstreyi yükleyin, gelen/giden hareketleri önizleyin; tekli ya da toplu şablon eşleyerek taslaklara aktarın.</p></div>
    <div className="bank-heading-actions">
     <Link to="/excel-yukle" className="inv-link">Excel Yükle ↗</Link>
     <label className="inv-primary bank-upload">⇧ {busy?'Dosya okunuyor...':'Banka ekstresi yükle'}
@@ -106,13 +169,13 @@ export default function BankaFaturaPage(){
    </div>
   </header>
   <div className="inv-alert" role="note"><strong>YEREL ÖNİZLEME</strong> — Ziraat Excel/CSV hareketleri tarayıcıda işlenir.
-   Belge seçimi yalnızca taslak sürecini başlatır; resmî fatura veya gider pusulası düzenlenmez. TCKN listede maskelenir.</div>
+   Şablon eşlemesi yalnızca kullanıcıya özel taslak oluşturur; resmî fatura veya gider pusulası düzenlenmez. TCKN/VKN listede maskelenir.</div>
   <div className="bank-metrics">
    <div><span>TOPLAM HAREKET</span><strong>{rows.length}</strong></div>
    <div><span>GELEN / ALACAK</span><strong className="bank-positive">{trMoney(counts.incoming)}</strong></div>
    <div><span>GİDEN / BORÇ</span><strong className="bank-negative">{trMoney(counts.outgoing)}</strong></div>
   </div>
-  {filename&&<div className="bank-file-note"><span>▣</span><strong>{filename}</strong><span>· {rows.length} hareket · {selectedIds.length} seçili · Belge seçimleri sadece bu ekranın belleğinde.</span></div>}
+  {filename&&<div className="bank-file-note"><span>▣</span><strong>{filename}</strong><span>· {rows.length} hareket · {selectedIds.length} seçili · Seçimler tarayıcıda; taslaklar PostgreSQL'de.</span></div>}
   {notice&&<div className="inv-banner" role="status">{notice}</div>}
   {error&&<div className="inv-error" role="alert">{error}</div>}
   <section className="inv-card bank-panel" aria-label="Banka hareketleri tablosu">
@@ -137,28 +200,28 @@ export default function BankaFaturaPage(){
      <button className="bank-tool-button" onClick={resetFilters}>↻ Filtreleri sıfırla</button>
     </div>
    </div>
-   {selectedIds.length>0&&<div className="bank-bulk-bar">
+   <div className="bank-bulk-bar">
     <strong>{selectedIds.length} hareket seçildi</strong>
-    <select aria-label="Seçililer için belge şablonu" value={bulkType} onChange={e=>setBulkType(e.target.value)}>
-     <option value="">Toplu belge şablonu seç...</option>
-     {BANK_DOCUMENT_TEMPLATES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
-    </select>
-    <button className="inv-outline" disabled={!bulkType} onClick={applyBulk}>Şablonu uygula</button>
-    <button className="bank-clear" onClick={()=>setSelectedIds([])}>Seçimi temizle</button>
-   </div>}
+    <button className="inv-primary bank-import-trigger" disabled={!selectedIds.length||templatesBusy||transferBusy}
+     onClick={openModal}>⇧ Seçilileri Taslağa Aktar</button>
+    {selectedIds.length>0&&<button className="bank-clear" onClick={()=>setSelectedIds([])}>Seçimi temizle</button>}
+    <span className="bank-selection-hint">Hızlı aktarım için Fatura Tipi seçip satırdaki ↗ düğmesini kullanın.</span>
+   </div>
    <div className="bank-grid-scroll">
     <table className="bank-grid">
      <thead><tr>
       <th className="bank-check-column"><input type="checkbox" aria-label="Sayfadaki tüm hareketleri seç" checked={allSelected} onChange={togglePage} disabled={!activeRows.length}/></th>
       <th className="bank-date-column">TARİH / SAAT</th>
       <th className="bank-source-column">BANKA / YÖN</th>
-      <th className="bank-description-column">KARŞI TARAF / AÇIKLAMA</th>
-      <th className="bank-amount-column">TUTAR</th>
-      <th className="bank-document-column">BELGE</th>
+      <th className="bank-description-column">AD SOYAD / AÇIKLAMA</th>
+      <th className="bank-identity-column">TCKN / VKN</th>
+      <th className="bank-amount-column">İŞLEM TUTARI</th>
+      <th className="bank-document-column">FATURA TİPİ</th>
       <th className="bank-actions-column">İŞLEM</th>
      </tr></thead>
      <tbody>{activeRows.map(row=>{
-      const chosen=BANK_DOCUMENT_TEMPLATES.find(t=>t.value===documents[row.id]);
+      const chosen=templates.find(t=>t.id===documents[row.id]);
+      const result=importResults[row.id];
       return <tr key={row.id} className={selectedIds.includes(row.id)?'bank-selected-row':''}>
        <td className="bank-checkbox-cell"><input type="checkbox" aria-label={'Hareket seç '+row.id} checked={selectedIds.includes(row.id)} onChange={()=>toggleRow(row.id)}/></td>
        <td className="bank-date-cell"><span>{dateParts(row.date).label}</span><small>{row.reference||'Referans yok'}</small></td>
@@ -168,25 +231,40 @@ export default function BankaFaturaPage(){
        <td className="bank-description-cell"><div className="bank-counterparty">
         <span className="bank-person-icon" aria-hidden="true">▧</span>
         <strong>{row.fullName||'Karşı taraf belirlenemedi'}</strong>
-        {row.tckn&&<small className="bank-tckn">{maskTckn(row.tckn)}</small>}
+        
         <span className="bank-description-text" title={redact(row.description)}>{redact(row.description)||'—'}</span>
        </div></td>
+       <td className="bank-identity-cell">{row.tckn?maskTckn(row.tckn):row.vkn?maskId(row.vkn):'—'}
+        <small>{row.tckn?'TCKN':row.vkn?'VKN':'Eksik'}</small>
+       </td>
        <td className={'bank-amount-cell '+(row.direction==='out'?'bank-negative':'bank-positive')}>
         {row.direction==='out'?'-':row.direction==='in'?'+':''}{trMoney(row.amount)}
        </td>
        <td className="bank-doc-cell">
-        <label className={'bank-document-picker '+(chosen?'bank-doc-'+chosen.tone:'')} title="Bu hareket için belge şablonu">
-         <span aria-hidden="true" className="bank-document-icon">{chosen?.icon||'◇'}</span>
-         <select aria-label={'Belge şablonu '+row.id} value={documents[row.id]||''} onChange={e=>choose(row.id,e.target.value)}>
+        <label className={'bank-document-picker '+(chosen?'bank-doc-'+(chosen.documentType==='g-pusulasi'?'voucher':'invoice'):'')}>
+         <span className="bank-document-icon" aria-hidden="true">{chosen?'▣':'◇'}</span>
+         <select aria-label={'Fatura tipi '+row.id} value={documents[row.id]||''} disabled={templatesBusy||result?.status==='created'}
+          onChange={e=>choose(row.id,e.target.value)}>
           <option value="">Şablon seç</option>
-          {BANK_DOCUMENT_TEMPLATES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
+          {templates.filter(t=>t.directions.includes(row.direction)).map(t=>
+           <option value={t.id} key={t.id}>{t.label} · {t.subtitle}</option>)}
          </select>
         </label>
        </td>
-       <td className="bank-action-cell"><div className="bank-row-actions">
-        <button type="button" title="Hareket ayrıntısı" aria-label={'Hareket ayrıntısı '+row.id} onClick={()=>setDetailId(row.id)}>◉</button>
-        <button type="button" title={chosen?'Seçili belge taslağına ilerle':'Önce belge şablonu seçin'} disabled={!chosen} aria-label={'Belge sürecine ilerle '+row.id} onClick={()=>proceed(row)}>↗</button>
-       </div></td>
+       <td className="bank-action-cell">
+        <div className="bank-row-actions">
+         <button type="button" title="Hareket ayrıntısı" aria-label={'Hareket ayrıntısı '+row.id} onClick={()=>setDetailId(row.id)}>◉</button>
+         <button type="button" title="Önizlemeyi düzenle" aria-label={'Hareket düzenle '+row.id}
+          disabled={result?.status==='created'} onClick={()=>setEditId(row.id)}>✎</button>
+         <button type="button" title="Önizlemeden sil" aria-label={'Hareket sil '+row.id} onClick={()=>removeRow(row.id)}>×</button>
+         <button type="button" title={chosen?'Hızlı taslak aktar':'Önce fatura tipi seçin'}
+          disabled={!chosen||transferBusy||result?.status==='created'}
+          aria-label={'Hızlı taslak aktar '+row.id} onClick={()=>quickTransfer(row)}>↗</button>
+        </div>
+        {result&&<span className={'bank-import-status '+(result.status==='created'?'bank-import-success':'bank-import-problem')}
+         role="status">{result.status==='created'?
+          '✓ '+result.reference:(reasonText[result.reason]||'Kontrol gerekli')}</span>}
+       </td>
       </tr>
      })}</tbody>
     </table>
@@ -198,10 +276,17 @@ export default function BankaFaturaPage(){
    </div>
    <div className="bank-table-footer">
     <span>{filtered.length} hareket · {activePage}/{pageCount} sayfa</span>
-    <span className="bank-footer-hint">Belge seç → Şablon belirle → ↗ İlerle</span>
+    <span className="bank-footer-hint">Fatura tipi seç → ↗ Hızlı aktar veya toplu aktar</span>
     <div><button disabled={activePage<=1} onClick={()=>setPage(p=>p-1)}>‹ Önceki</button><button disabled={activePage>=pageCount} onClick={()=>setPage(p=>p+1)}>Sonraki ›</button></div>
    </div>
   </section>
+  {modalIds&&<BankTemplateModal
+   rows={rows.filter(row=>modalIds.includes(row.id)).map(row=>({...row,templateId:documents[row.id]}))}
+   templates={templates} busy={transferBusy}
+   onClose={()=>setModalIds(null)}
+   onConfirm={templateId=>submitRows(rows.filter(row=>modalIds.includes(row.id)),templateId)}/>}
+  {editId!==null&&rows.some(row=>row.id===editId)&&<BankRowEditModal
+   row={rows.find(row=>row.id===editId)} onClose={()=>setEditId(null)} onSave={editRow}/>}
   {detail&&<div className="bank-modal-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setDetailId(null)}}>
    <div role="dialog" aria-modal="true" aria-label="Banka hareketi ayrıntıları" className="inv-card bank-modal">
     <div className="bank-modal-head"><h2>Hareket ayrıntıları</h2><button aria-label="Ayrıntıları kapat" onClick={()=>setDetailId(null)}>✕</button></div>
@@ -209,7 +294,7 @@ export default function BankaFaturaPage(){
      <dt>Banka / yön</dt><dd>Ziraat Bankası · {detail.direction==='in'?'Gelen':detail.direction==='out'?'Giden':'Belirsiz'}</dd>
      <dt>İşlem no</dt><dd>{detail.reference||'—'}</dd>
      <dt>Karşı taraf</dt><dd>{detail.fullName||'Belirlenemedi'}</dd>
-     <dt>TCKN</dt><dd>{maskTckn(detail.tckn)}</dd>
+     <dt>TCKN / VKN</dt><dd>{detail.tckn?maskTckn(detail.tckn):maskId(detail.vkn)}</dd>
      <dt>Açıklama</dt><dd>{redact(detail.description)}</dd>
      <dt>Tutar</dt><dd>{detail.direction==='out'?'-':''}{trMoney(detail.amount)}</dd>
     </dl>
