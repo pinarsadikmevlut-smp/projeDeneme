@@ -82,7 +82,7 @@ describe('Banka Hareketleri önizlemesi ve taslak aktarımı',()=>{
  });
  it('single-row quick transfer uses selected API template and updates row status',async()=>{
   renderPage();await importFile();
-  await waitFor(()=>expect(screen.getByLabelText('Fatura tipi 1').options.length).toBe(3);
+  await waitFor(()=>expect(screen.getByLabelText('Fatura tipi 1').options.length).toBe(3));
   fireEvent.change(screen.getByLabelText('Fatura tipi 1'),{target:{value:'altin_satis_arsiv'}});
   fireEvent.click(screen.getByRole('button',{name:'Hızlı taslak aktar 1'}));
   await waitFor(()=>expect(apiRequest).toHaveBeenCalledWith('/invoices/bank-import',expect.objectContaining({
