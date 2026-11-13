@@ -76,7 +76,7 @@ export default function MusterilerPage(){
     <p>{demoMode?'Örnek müşteriler ve Excel aktarımını giriş yapmadan deneyin.':'Excel’den aktarılan ve elle oluşturulan kayıtlar PostgreSQL’de kalıcı tutulur.'}</p></div>
    <div className="customers-heading-actions">
     {authenticated&&<span className="customers-user">● {user?.username||'Yetkili'}</span>}
-    {authenticated&&<button className="customers-secondary" onClick={()=>{logout().catch(()=>{});}}>Çıkış</button>}
+    {authenticated&&<button className="customers-secondary" onClick={()=>{logout().catch(err=>setError('Çıkış tamamlanamadı: '+err.message));}}>Çıkış</button>}
     <button className="customers-primary" onClick={openCreate}>+ Yeni Müşteri</button>
    </div>
   </div>

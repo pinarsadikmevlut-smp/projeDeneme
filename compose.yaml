@@ -21,8 +21,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-goldensoft}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-goldensoft}
       SECRET_KEY: ${SECRET_KEY:-}
-      CUSTOMER_ADMIN_USERNAME: ${CUSTOMER_ADMIN_USERNAME:-}
-      CUSTOMER_ADMIN_PASSWORD: ${CUSTOMER_ADMIN_PASSWORD:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
     command: ["sh", "-c", "python -m flask --app app init-db && exec gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 8 --timeout 20 app:app"]
     depends_on:

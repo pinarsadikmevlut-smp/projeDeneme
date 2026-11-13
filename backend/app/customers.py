@@ -1,18 +1,12 @@
 """Local customer registry: authenticated API over the existing PostgreSQL database.
 
-This is a single-operator administration layer for development/small deployments,
-not a replacement for corporate SSO, MFA, or role-based access controls.
+User-scoped endpoints require JWT authentication; existing legacy customer rows
+are preserved separately and are never exposed to newly registered users.
 """
-import hmac
-import os
 import re
-import secrets
-import threading
-import time
 from datetime import datetime, timezone
-from functools import wraps
 
-from flask import Blueprint, current_app, jsonify, request, session
+from flask import Blueprint, g, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, or_
 
@@ -22,15 +16,15 @@ bp = Blueprint("customer_registry", __name__, url_prefix="/api")
 
 LETTERS = "A-Za-zÇĞİÖŞÜçğıöşü"
 FULL_NAME_RE = re.compile(r"^[" + LETTERS + r"]+(?:[ '\-][" + LETTERS + r"]+){1,7}$")
-FAILURES = {}
-FAILURES_LOCK = threading.Lock()
 
 
 class Customer(db.Model):
-    __tablename__ = "customers"
+    __tablename__ = "user_customers"
     id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("app_users.id"), nullable=False, index=True)
     full_name = db.Column(db.String(160), nullable=False)
-    tckn = db.Column(db.String(11), nullable=False, unique=True, index=True)
+    tckn = db.Column(db.String(11), nullable=False, index=True)
+    __table_args__ = (db.UniqueConstraint("owner_id", "tckn", name="uq_customer_owner_tckn"),)
     source = db.Column(db.String(30), nullable=False, default="manual")
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
@@ -44,38 +38,9 @@ class Customer(db.Model):
         }
 
 
-def admin_ready():
-    name = str(current_app.config.get("CUSTOMER_ADMIN_USERNAME") or "").strip()
-    password = str(current_app.config.get("CUSTOMER_ADMIN_PASSWORD") or "")
-    secret = current_app.config.get("SECRET_KEY") or ""
-    return bool(name and len(password) >= 12 and len(secret) >= 24 and
-                not password.lower().startswith(("change-", "replace-")) and
-                not str(secret).lower().startswith(("change-", "replace-")))
-
-
-def is_customer_admin():
-    return admin_ready() and session.get("customer_admin") == current_app.config["CUSTOMER_ADMIN_USERNAME"]
-
-
-def csrf_ok():
-    expected = session.get("customer_csrf")
-    provided = request.headers.get("X-CSRF-Token", "")
-    return bool(expected and provided and hmac.compare_digest(expected, provided))
-
-
-def protected(mutation=False):
-    def decorate(handler):
-        @wraps(handler)
-        def wrapper(*args, **kwargs):
-            if not admin_ready():
-                return jsonify(error="customer_auth_not_configured", message="Müşteri yönetimi kimlik doğrulaması yapılandırılmamış."), 503
-            if not is_customer_admin():
-                return jsonify(error="unauthorized", message="Müşteri yönetimi oturumu açılmalı."), 401
-            if mutation and not csrf_ok():
-                return jsonify(error="csrf_invalid", message="Güvenlik doğrulaması geçersiz. Yeniden giriş yapın."), 403
-            return handler(*args, **kwargs)
-        return wrapper
-    return decorate
+def scoped_customers():
+    """All customer reads start from current authenticated ownership."""
+    return db.select(Customer).where(Customer.owner_id == g.current_user.id)
 
 
 def valid_tckn(value):
@@ -97,61 +62,11 @@ def normalize_customer(payload):
 
 
 def add_event(action, target, details=None):
-    db.session.add(AuditEvent(actor_id=session.get("customer_admin", "unknown"), action=action,
+    db.session.add(AuditEvent(actor_id=str(g.current_user.id), action=action,
                               target=str(target), details=details or {}))
 
 
-def limit_login(ip):
-    # Limited single-process defense; deploy an external proxy rate limiter for production.
-    now = time.monotonic()
-    with FAILURES_LOCK:
-        attempts = [t for t in FAILURES.get(ip, []) if now - t < 300]
-        if len(attempts) >= 5:
-            FAILURES[ip] = attempts
-            return True
-        FAILURES[ip] = attempts
-    return False
-
-
-@bp.post("/auth/login")
-def customer_login():
-    if not admin_ready():
-        return jsonify(error="customer_auth_not_configured",
-                       message="Sunucuda CUSTOMER_ADMIN_USERNAME, CUSTOMER_ADMIN_PASSWORD ve SECRET_KEY ayarlanmalı."), 503
-    ip = request.remote_addr or "unknown"
-    if limit_login(ip):
-        return jsonify(error="rate_limited", message="Çok fazla giriş denemesi. Bir süre sonra tekrar deneyin."), 429
-    payload = request.get_json(silent=True) or {}
-    user = str(payload.get("username") or "")
-    password = str(payload.get("password") or "")
-    expected_user = str(current_app.config["CUSTOMER_ADMIN_USERNAME"])
-    expected_password = str(current_app.config["CUSTOMER_ADMIN_PASSWORD"])
-    allowed = (hmac.compare_digest(user.encode(), expected_user.encode()) and
-               hmac.compare_digest(password.encode(), expected_password.encode()))
-    if not allowed:
-        with FAILURES_LOCK:
-            FAILURES.setdefault(ip, []).append(time.monotonic())
-        return jsonify(error="invalid_credentials", message="Kullanıcı adı veya parola hatalı."), 401
-    with FAILURES_LOCK:
-        FAILURES.pop(ip, None)
-    session.clear()
-    session["customer_admin"] = expected_user
-    session["customer_csrf"] = secrets.token_urlsafe(32)
-    session.permanent = True
-    return jsonify(authenticated=True, user={"username": expected_user},
-                   permissions=["customers:read", "customers:write"],
-                   csrfToken=session["customer_csrf"])
-
-
-@bp.post("/auth/logout")
-@protected(mutation=True)
-def customer_logout():
-    session.clear()
-    return jsonify(ok=True)
-
-
 @bp.get("/customers")
-@protected()
 def list_customers():
     query = (request.args.get("q") or "").strip()[:100]
     try:
@@ -159,7 +74,7 @@ def list_customers():
         per_page = min(100, max(1, int(request.args.get("perPage", "25"))))
     except ValueError:
         return jsonify(error="bad_pagination"), 400
-    statement = db.select(Customer)
+    statement = scoped_customers()
     if query:
         # SQLAlchemy handles parameters; do not concatenate SQL.
         safe = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -175,12 +90,11 @@ def list_customers():
 
 
 @bp.post("/customers")
-@protected(mutation=True)
 def create_customer():
     data = normalize_customer(request.get_json(silent=True))
     if not data:
         return jsonify(error="invalid_customer", message="Geçerli Ad Soyad ve 11 haneli TCKN girin."), 400
-    record = Customer(full_name=data["fullName"], tckn=data["tckn"], source="manual")
+    record = Customer(owner_id=g.current_user.id, full_name=data["fullName"], tckn=data["tckn"], source="manual")
     db.session.add(record)
     try:
         db.session.flush()
@@ -193,9 +107,8 @@ def create_customer():
 
 
 @bp.patch("/customers/<int:customer_id>")
-@protected(mutation=True)
 def update_customer(customer_id):
-    record = db.session.get(Customer, customer_id)
+    record = db.session.scalar(scoped_customers().where(Customer.id == customer_id))
     if record is None:
         return jsonify(error="not_found", message="Müşteri bulunamadı."), 404
     payload = request.get_json(silent=True)
@@ -225,7 +138,6 @@ def update_customer(customer_id):
 
 
 @bp.post("/customers/import")
-@protected(mutation=True)
 def import_customers():
     payload = request.get_json(silent=True)
     incoming = payload.get("customers") if isinstance(payload, dict) else None
@@ -247,13 +159,13 @@ def import_customers():
     if not valid:
         return jsonify(created=0, existing=0, invalid=invalid, total=len(incoming))
     existing_tckn = set(db.session.scalars(
-        db.select(Customer.tckn).where(Customer.tckn.in_([v["tckn"] for v in valid]))
+        db.select(Customer.tckn).where(Customer.owner_id == g.current_user.id, Customer.tckn.in_([v["tckn"] for v in valid]))
     ).all())
     created = 0
     for data in valid:
         if data["tckn"] in existing_tckn:
             continue
-        db.session.add(Customer(full_name=data["fullName"], tckn=data["tckn"], source="ziraat_excel"))
+        db.session.add(Customer(owner_id=g.current_user.id, full_name=data["fullName"], tckn=data["tckn"], source="ziraat_excel"))
         created += 1
     add_event("customer.import", "batch", {
         "created": created, "existing": len(valid) - created, "invalid": invalid,

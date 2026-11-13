@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from flask import Flask, jsonify, request, session, abort
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 
@@ -33,14 +33,18 @@ def create_app(test_config=None):
         PERMANENT_SESSION_LIFETIME=1800,
         MAX_CONTENT_LENGTH=1024 * 1024,
         SECRET_KEY=os.getenv("SECRET_KEY"),
-        CUSTOMER_ADMIN_USERNAME=os.getenv("CUSTOMER_ADMIN_USERNAME", ""),
-        CUSTOMER_ADMIN_PASSWORD=os.getenv("CUSTOMER_ADMIN_PASSWORD", ""),
+        JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY", ""),
+        JWT_TTL_SECONDS=1800,
     )
     if test_config:
         app.config.update(test_config)
     db.init_app(app)
-    from .customers import bp as customers_bp, is_customer_admin, Customer
+    from .auth import bp as auth_bp, install_auth, User
+    from .customers import bp as customers_bp, Customer
+    app.register_blueprint(auth_bp)
     app.register_blueprint(customers_bp)
+    install_auth(app)
+    from . import tenant  # noqa: F401 — register ORM ownership filters
 
     @app.cli.command("init-db")
     def init_db_command():
@@ -64,15 +68,6 @@ def create_app(test_config=None):
     @app.get("/api/info")
     def info():
         return jsonify(name="goldenSoft", version="0.2.0")
-
-    @app.get("/api/auth/session")
-    def auth_session():
-        if is_customer_admin():
-            return jsonify(authenticated=True,
-                user={"username": session["customer_admin"]},
-                permissions=["customers:read", "customers:write"],
-                csrfToken=session.get("customer_csrf"))
-        return jsonify(authenticated=False, user=None, permissions=[])
 
     @app.get("/api/market/prices")
     def market_prices():

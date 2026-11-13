@@ -5,8 +5,11 @@ import {faSun,faMoon,faRotate,faExpand,faSliders,faBars} from '@fortawesome/free
 import {navigation} from '../../config/navigation.config';
 import {formatTime} from '../../utils/format';
 import {refreshMarketData} from '../../services/marketData.service';
+import {useAuth} from '../../context/AuthContext';
 export default function TopNavbar({dark,onToggleTheme,onOpenSettings}){
  const [now,setNow]=useState(()=>new Date());const [menu,setMenu]=useState(false);
+ const {user,logout}=useAuth();
+ const [logoutError,setLogoutError]=useState('');
  useEffect(()=>{const id=setInterval(()=>setNow(new Date()),1000);return ()=>clearInterval(id)},[]);
  const fullScreen=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.().catch(()=>{});};
  return <header className="border-b border-slate-200 bg-white/90 dark:border-slate-800 dark:bg-[#101620]/95">
@@ -22,6 +25,6 @@ export default function TopNavbar({dark,onToggleTheme,onOpenSettings}){
  <button className="control" title="Altınkaynak fiyatlarını yenile" aria-label="Yenile" onClick={refreshMarketData}><FontAwesomeIcon icon={faRotate}/></button>
  <button className="control hidden sm:block" title="Tam ekran" aria-label="Tam ekran" onClick={fullScreen}><FontAwesomeIcon icon={faExpand}/></button>
  <button className="control" onClick={onOpenSettings}><FontAwesomeIcon icon={faSliders}/><span className="ml-2 hidden xl:inline">Ayar & Marj</span></button>
- <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 dark:border-slate-700 xl:flex"><div className="grid h-9 w-9 place-items-center rounded-full bg-gold-500/15 font-outfit font-bold text-gold-600 dark:text-gold-400">MP</div><span className="text-xs font-semibold">Metin Pınar</span></div>
- </div></div></header>;
+ <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 dark:border-slate-700 xl:flex"><div className="grid h-9 w-9 place-items-center rounded-full bg-gold-500/15 font-outfit font-bold text-gold-600 dark:text-gold-400">{(user?.username||"U").slice(0,2).toUpperCase()}</div><span className="text-xs font-semibold">{user?.username||"Kullanıcı"}</span></div><button className="control" title="Oturumu kapat" aria-label="Çıkış yap" onClick={()=>{setLogoutError('');logout().catch(()=>setLogoutError('Çıkış tamamlanamadı. Bağlantıyı kontrol edin.'));}}>Çıkış</button>
+ {logoutError&&<p role="alert" className="w-full text-xs text-rose-600">{logoutError}</p>}</div></div></header>;
 }
