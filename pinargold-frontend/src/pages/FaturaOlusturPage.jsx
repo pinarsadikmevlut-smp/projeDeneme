@@ -12,7 +12,7 @@ const n=v=>Math.max(0,Number(v)||0);
 const lineTotal=row=>((row.unit==='gram'?n(row.weightGram)*n(row.unitPrice):n(row.unitPrice))+n(row.workmanship))*n(row.quantity);
 const fromBank=bank=>{
  if(!bank)return blankLine();
- return {...blankLine(),name:'Banka havalesi — ürün adını doğrulayın',karat:'diger',fineness:'1',
+ return {...blankLine(),name:bank.direction==='out'?'Banka çıkışı — ürün/hizmeti doğrulayın':'Banka havalesi — ürün adını doğrulayın',karat:'diger',fineness:'1',
   unit:'adet',weightGram:'0',unitPrice:String(bank.amount||'')};
 };
 
@@ -23,7 +23,7 @@ export default function FaturaOlusturPage(){
  const editId=params.get('id');
  const [customers,setCustomers]=useState([]);
  const [customerId,setCustomerId]=useState(bank?.customerId||'');
- const [documentType,setDocumentType]=useState('e-arsiv');
+ const [documentType,setDocumentType]=useState(bank?.documentType||'e-arsiv');
  const [paymentMethod,setPaymentMethod]=useState(bank?'Havale / EFT':'Nakit');
  const [notes,setNotes]=useState('');
  const [lines,setLines]=useState(salesLines?.length?salesLines.map((row,i)=>({...row,key:'cart-'+i})): [fromBank(bank)]);
@@ -59,7 +59,7 @@ export default function FaturaOlusturPage(){
  const save=async event=>{
   event.preventDefault();setBusy(true);setError('');setNotice('');
   try{
-   if(lines.some(row=>row.name.startsWith('Banka havalesi —'))){
+   if(lines.some(row=>row.name.startsWith('Banka havalesi —')||row.name.startsWith('Banka çıkışı —'))){
     setError('Havale tutarından gerçek ürün adı belirlenemez. Ürün adını doğrulayarak değiştirin.');
     return;
    }
@@ -84,14 +84,14 @@ export default function FaturaOlusturPage(){
   </header>
   <div className="inv-alert" role="note"><strong>DEMO / ÖN BELGE</strong> — Buradaki toplamlar vergi hariç ticari taslak hesaplamalarıdır. KDV, özel matrah, GİB belge numarası ve resmî iletim hesaplanmaz.</div>
   {salesLines?.length>0&&<div className="inv-banner">◎ Satış sepetinden {salesLines.length} ürün getirildi. Gramaj ve ayar varsayımlarını belgeye kaydetmeden önce doğrulayın. Sepet fiyatları gerçek fatura tutarını garanti etmez.</div>}
-  {bank&&<div className="inv-banner">↗ Bankadan taslağa: <strong>{bank.reference||'Referans yok'}</strong> · {fmt(bank.amount)} · Ürün cinsi ve müşteri eşleşmesini doğrulamadan kaydetmeyin.</div>}
+  {bank&&<div className="inv-banner">↗ Bankadan taslağa: <strong>{bank.reference||'Referans yok'}</strong> · {fmt(bank.amount)} · Belge türü, ürün/hizmet ve müşteri eşleşmesini doğrulamadan kaydetmeyin.</div>}
   {error&&<p className="inv-error" role="alert">{error}</p>}
   {loading?<p className="inv-loading">Kayıtlar yükleniyor...</p>:
   <form onSubmit={save}>
    <div className="inv-columns">
     <div className="inv-main">
      <section className="inv-card">
-      <div className="inv-card-heading"><span>01</span><div><h2>Belge bilgileri</h2><p>Cari ve fatura tipi</p></div></div>
+      <div className="inv-card-heading"><span>01</span><div><h2>Belge bilgileri</h2><p>Cari ve belge tipi</p></div></div>
       <div className="inv-grid-2">
        <label className="inv-field">Müşteri / Cari
         <select required value={customerId} onChange={e=>setCustomerId(e.target.value)}>
@@ -103,6 +103,7 @@ export default function FaturaOlusturPage(){
         <select value={documentType} onChange={e=>setDocumentType(e.target.value)}>
          <option value="e-arsiv">e-Arşiv taslağı</option>
          <option value="e-fatura">e-Fatura taslağı</option>
+         <option value="gider-pusulasi">G.P. · Gider Pusulası taslağı</option>
         </select>
        </label>
        <label className="inv-field">Ödeme yöntemi

@@ -63,7 +63,7 @@ export default function InvoiceQueuePage({mode='drafts'}){
     <tbody>{visible.map(row=><tr key={row.id}>
      <td><strong>{row.reference}</strong><small>{row.source==='bank_excel'?'↗ Banka hareketi':'Manuel giriş'}</small></td>
      <td>{row.customerName}</td>
-     <td>{row.documentType==='e-fatura'?'e-Fatura taslağı':'e-Arşiv taslağı'}</td>
+     <td>{row.documentType==='gider-pusulasi'?'Gider Pusulası taslağı':row.documentType==='e-fatura'?'e-Fatura taslağı':'e-Arşiv taslağı'}</td>
      <td>{date(row.createdAt)}</td><td className="inv-table-money">{money(row.total)}</td>
      <td><span className={'inv-state inv-'+row.status}>{label[row.status]}</span></td>
      <td><div className="inv-actions">
