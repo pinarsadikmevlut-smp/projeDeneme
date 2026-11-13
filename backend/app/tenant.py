@@ -9,6 +9,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import Session, with_loader_criteria
 
 from .customers import Customer
+from .invoices import InvoiceDraft
 
 
 @event.listens_for(Session, "do_orm_execute")
@@ -20,14 +21,14 @@ def scope_customer_reads(state):
         return
     if state.is_select:
         state.statement = state.statement.options(
-            with_loader_criteria(Customer, lambda cls: cls.owner_id == owner_id,
-                                 include_aliases=True)
+            with_loader_criteria(Customer, lambda cls: cls.owner_id == owner_id, include_aliases=True),
+            with_loader_criteria(InvoiceDraft, lambda cls: cls.owner_id == owner_id, include_aliases=True)
         )
     elif state.is_update or state.is_delete:
         # ORM bulk writes skip before_flush. Constrain them, too.
         mapper = state.bind_arguments.get("mapper")
-        if mapper is not None and mapper.class_ is Customer:
-            state.statement = state.statement.where(Customer.owner_id == owner_id)
+        if mapper is not None and mapper.class_ in (Customer, InvoiceDraft):
+            state.statement = state.statement.where(mapper.class_.owner_id == owner_id)
 
 
 @event.listens_for(Session, "before_flush")
@@ -36,5 +37,5 @@ def enforce_customer_ownership(session, flush_context, instances):
         return
     owner_id = getattr(g, "current_user_id", None)
     for row in (*session.new, *session.dirty, *session.deleted):
-        if isinstance(row, Customer) and (owner_id is None or row.owner_id != owner_id):
-            raise PermissionError("Customer ownership violation")
+        if isinstance(row, (Customer, InvoiceDraft)) and (owner_id is None or row.owner_id != owner_id):
+            raise PermissionError("Tenant ownership violation")

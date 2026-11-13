@@ -41,8 +41,10 @@ def create_app(test_config=None):
     db.init_app(app)
     from .auth import bp as auth_bp, install_auth, User
     from .customers import bp as customers_bp, Customer
+    from .invoices import bp as invoices_bp, InvoiceDraft
     app.register_blueprint(auth_bp)
     app.register_blueprint(customers_bp)
+    app.register_blueprint(invoices_bp)
     install_auth(app)
     from . import tenant  # noqa: F401 — register ORM ownership filters
 
@@ -51,7 +53,7 @@ def create_app(test_config=None):
         """Initialize missing local customer/audit tables; does not delete data."""
         with app.app_context():
             db.create_all()
-        print("Customer and audit tables initialized.")
+        print("Application tables initialized (non-destructive).")
 
     @app.after_request
     def security_headers(response):
