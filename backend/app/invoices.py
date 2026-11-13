@@ -99,6 +99,8 @@ def parse_payload(payload):
         name = line.get("name")
         if not isinstance(name, str) or not 2 <= len(name.strip()) <= 100:
             raise ValueError("Ürün adı 2-100 karakter olmalı.")
+        if "doğrulanacak" in name.casefold():
+            raise ValueError("Önce ürün/hizmet bilgisini doğrulayarak düzeltin.")
         karat = str(line.get("karat") or "")
         unit = str(line.get("unit") or "")
         if karat not in ALLOWED_KARATS or unit not in ALLOWED_UNITS:
@@ -218,6 +220,8 @@ def mark_reviewed(invoice_id):
         return jsonify(error="not_found"), 404
     if record.status != "draft":
         return jsonify(error="invalid_transition"), 409
+    if any(line.get("requiresReview") for line in record.lines):
+        return jsonify(error="verification_required", message="Banka taslağı için önce ürün ve belge bilgilerini doğrulayın."), 409
     record.status = "ready"
     audit("invoice.review.approve", record)
     db.session.commit()

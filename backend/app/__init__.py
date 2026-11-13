@@ -42,9 +42,11 @@ def create_app(test_config=None):
     from .auth import bp as auth_bp, install_auth, User
     from .customers import bp as customers_bp, Customer
     from .invoices import bp as invoices_bp, InvoiceDraft
+    from .bank_import import bp as bank_import_bp, BankImportKey
     app.register_blueprint(auth_bp)
     app.register_blueprint(customers_bp)
     app.register_blueprint(invoices_bp)
+    app.register_blueprint(bank_import_bp)
     install_auth(app)
     from . import tenant  # noqa: F401 — register ORM ownership filters
 
