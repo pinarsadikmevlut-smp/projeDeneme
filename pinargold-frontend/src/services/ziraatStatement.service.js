@@ -10,6 +10,7 @@ const FIELDS = {
  amount:['Tutar','İşlem Tutarı','Tutar TL','TL Tutar','İşlem Tutarı (TL)'],
  direction:['İşlem Türü','İşlem Tipi','Yön','Giriş Çıkış'],
  tckn:['TCKN','TC Kimlik No','T.C. Kimlik No','Kimlik No'],
+ vkn:['VKN','Vergi Kimlik No','Vergi Kimlik Numarası','Vergi Numarası','Vergi No'],
  fullName:['Ad Soyad','Adı Soyadı','İsim Soyisim','Gönderen Ad Soyad','Müşteri']
 };
 export const STANDARD_COLUMNS = [
@@ -177,13 +178,16 @@ export function recordsFromMatrix(matrix){
   }
   if(!date||/^(toplam|genel toplam|muh(?:asebe)? tarih|tarih)$/i.test(date)||!description&&debit===0&&credit===0)continue;
   const person=parseIdentity(description,get(row,'tckn'),get(row,'fullName'));
+  const explicitVkn=String(get(row,'vkn')||'').replace(/\s/g,'');
+  const embeddedVkn=description.match(/(?:VKN|VERG[İI] (?:K[İI]ML[İI]K )?(?:NO|NUMARASI))\s*[:=./-]?\s*(\d{10})(?!\d)/i)?.[1]||'';
+  const vkn=/^\d{10}$/.test(explicitVkn)?explicitVkn:embeddedVkn;
   const rowFields=Object.fromEntries(headers.map((h,i)=>[h,['date','valueDate'].includes(mapped[i])?excelDate(row[i]):normText(row[i])]));
   records.push({
    id:records.length+1,date,valueDate:excelDate(get(row,'valueDate')),
    reference:normText(get(row,'reference')),description,
    debit,credit,balance:parseMoney(get(row,'balance')),
    amount:credit>0?credit:debit,direction:credit>0?'in':debit>0?'out':'unknown',
-   ...person,fullName:[person.firstName,person.lastName].filter(Boolean).join(' '),rawFields:rowFields
+   ...person,vkn,fullName:[person.firstName,person.lastName].filter(Boolean).join(' '),rawFields:rowFields
   });
  }
  if(!records.length)throw Error('Okunabilir hesap hareketi bulunamadı.');
