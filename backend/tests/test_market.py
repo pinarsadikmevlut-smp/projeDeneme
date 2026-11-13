@@ -168,10 +168,19 @@ def test_endpoint_returns_in_memory_snapshot(monkeypatch):
     store = make_store()
     store.refresh_once()
     monkeypatch.setattr(market_module, "market_store", store)
-    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://"})
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://",
+                      "JWT_SECRET_KEY": "test-market-signing-secret-long-enough-1234",
+                      "SESSION_COOKIE_SECURE": False})
+    from app import db
+    with app.app_context():
+        db.create_all()
+    client = app.test_client()
+    assert client.post("/api/auth/register", json={
+        "username": "marketuser", "password": "strong-market-password-12345"
+    }).status_code == 201
     # Do not start a background test thread: replace start with a no-op.
     monkeypatch.setattr(store, "start", lambda: None)
-    response = app.test_client().get("/api/market/prices")
+    response = client.get("/api/market/prices")
     assert response.status_code == 200
     assert response.json["quoteCount"] == 67
     assert response.headers["Cache-Control"] == "no-store"
