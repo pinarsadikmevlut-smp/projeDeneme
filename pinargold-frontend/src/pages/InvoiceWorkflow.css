@@ -199,3 +199,53 @@
 .dark .bank-modal dd{color:#d4deea}
 @media(max-width:1100px){.bank-toolbar{align-items:stretch}.bank-filter-left,.bank-filter-right{justify-content:space-between}}
 @media(max-width:640px){.bank-metrics{grid-template-columns:1fr}.bank-metrics>div{padding:10px 13px}.bank-date-range{flex-wrap:wrap}.bank-filter-right .bank-search{width:100%}.bank-footer-hint{display:none}.bank-heading-actions{justify-content:space-between;width:100%}}
+
+
+/* Bank statement v2 — scoped styles, existing pinarGold palette untouched. */
+.bank-page .bank-grid{min-width:1260px}
+.bank-page .bank-date-column{width:150px}
+.bank-page .bank-source-column{width:112px}
+.bank-page .bank-description-column{width:auto}
+.bank-page .bank-identity-column{width:122px}
+.bank-page .bank-amount-column{width:145px}
+.bank-page .bank-document-column{width:185px}
+.bank-page .bank-actions-column{width:184px}
+.bank-identity-cell{font-variant-numeric:tabular-nums;font-size:.8rem;font-weight:800;color:#596781;white-space:nowrap}
+.bank-identity-cell small{display:block;font-weight:600;font-size:.62rem;color:#9ca6b3;margin-top:3px}
+.bank-page .bank-row-actions{gap:3px;justify-content:flex-start}
+.bank-page .bank-row-actions button{min-width:27px;width:27px;height:27px;font-size:.87rem;flex-shrink:0}
+.bank-page .bank-doc-cell .bank-document-picker select{max-width:175px;font-size:.67rem;min-height:29px}
+.bank-page .bank-bulk-bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.bank-page .bank-import-trigger{padding:8px 13px;font-size:.75rem}
+.bank-selection-hint{font-size:.73rem;color:#8892a1;line-height:1.35}
+.bank-import-status{display:block;white-space:normal;line-height:1.3;font-size:.62rem;font-weight:700;max-width:175px;padding:4px 0}
+.bank-import-success{color:#078d65}.bank-import-problem{color:#b17624}
+.bank-transfer-modal{width:min(560px,100%);max-height:88vh;overflow-y:auto}
+.bank-transfer-modal .bank-modal-head p{font-size:.77rem;color:#8591a1;margin-top:7px}
+.bank-transfer-modal .inv-field{margin:15px 0}
+.bank-template-list{display:grid;gap:8px;max-height:310px;overflow-y:auto;padding:2px}
+.bank-template-option{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid #e1e7ef;border-radius:10px;cursor:pointer;background:#fff}
+.bank-template-option.selected{border-color:#cba35a;background:#fffaf0}
+.bank-template-option:has(input:disabled){opacity:.5;cursor:not-allowed}
+.bank-template-option input{accent-color:#c19543;width:17px;height:17px}
+.bank-template-option>span:nth-child(2){display:grid;gap:4px;flex:1;min-width:0}
+.bank-template-option strong{font-weight:800;font-size:.87rem}
+.bank-template-option small{font-size:.75rem;color:#8591a1}
+.bank-template-direction{font-size:.7rem;font-weight:800;color:#af8239;white-space:nowrap}
+.bank-template-warning{padding:10px 12px;margin-top:14px;border-radius:9px;border:1px solid #e8cd8f;color:#906b26;background:#fff9e9;font-size:.76rem}
+.bank-modal-buttons{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}
+.bank-edit-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bank-edit-form>.inv-hint,.bank-edit-form>.inv-error,.bank-edit-form>.bank-modal-buttons{grid-column:1/-1}
+.dark .bank-identity-cell{color:#c1cbda}
+.dark .bank-template-option{background:#182231;border-color:#344257}
+.dark .bank-template-option.selected{background:#322c1b;border-color:#bd9042}
+.dark .bank-template-option strong{color:#e8edf5}
+.dark .bank-template-warning{background:#342a19;border-color:#806638;color:#eac580}
+.dark .bank-selection-hint{color:#adbbca}
+.dark .bank-import-problem{color:#e2b16d}
+@media(max-width:650px){
+ .bank-edit-form{grid-template-columns:1fr}
+ .bank-transfer-modal{padding:16px}
+ .bank-template-option{padding:9px}
+ .bank-page .bank-actions-column{width:174px}
+}
