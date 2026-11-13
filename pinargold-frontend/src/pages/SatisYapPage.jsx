@@ -126,7 +126,7 @@ export default function SatisYapPage(){
    fineness:row.id==='bilezik22'?'0.916':row.id==='altin18'?'0.75':row.id==='altin14'?'0.585':'1',
    unit:row.id==='usd'||row.id==='eur'?'adet':row.id==='ceyrek'||row.id==='yarim'||row.id==='tam'?'adet':'gram',
    weightGram:'1',quantity:row.qty,unitPrice:row.unitPrice,workmanship:'0'
-  }))}})}>Fatura taslağına aktar <span>⟶</span><small>Resmî fatura oluşturmaz</small></button><button className="sales-reset" type="button" onClick={reset}>Sepeti temizle</button>{message&&<span role="status" className="sales-help">{message}</span>}</div>
+  }))}})}>Fatura taslağına aktar <span>⟶</span><small>Resmî fatura oluşturmaz</small></button><button disabled className="sales-reset" type="button">Satış Tamamla / Fatura Kes (resmî işlem kapalı)</button><button className="sales-reset" type="button" onClick={reset}>Sepeti temizle</button>{message&&<span role="status" className="sales-help">{message}</span>}</div>
    </aside>
   </div>
   {customerOpen&&<div className="sales-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setCustomerOpen(false)}}><div className="sales-modal" role="dialog" aria-modal="true" aria-labelledby="sales-modal-title"><h2 id="sales-modal-title">Yeni müşteri</h2><p>Müşteri kayıt altyapısı henüz etkin değil. Bu alan sonraki geliştirme aşamasında açılacak.</p><button onClick={()=>setCustomerOpen(false)}>Kapat</button></div></div>}
