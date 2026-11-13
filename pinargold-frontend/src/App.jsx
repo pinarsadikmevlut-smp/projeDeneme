@@ -11,8 +11,8 @@ import {AuthProvider} from './context/AuthContext';
 import {DemoCustomersProvider} from './context/DemoCustomersContext';
 
 function PageGuard({children}){const location=useLocation();return <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>;}
-function UserLayout({dark,onToggleTheme,onOpenSettings}){
- return <DemoCustomersProvider><MainLayout dark={dark} onToggleTheme={onToggleTheme} onOpenSettings={onOpenSettings}/></DemoCustomersProvider>;
+function UserLayout({dark,onToggleTheme,onOpenSettings,settingsOpen,onCloseSettings}){
+ return <DemoCustomersProvider><MainLayout dark={dark} onToggleTheme={onToggleTheme} onOpenSettings={onOpenSettings}/><MarginSettingsModal open={settingsOpen} onClose={onCloseSettings}/></DemoCustomersProvider>;
 }
 export default function App(){
  const [dark,setDark]=useState(()=>localStorage.getItem('pinargold-theme')!=='light');
@@ -22,10 +22,10 @@ export default function App(){
   <Route path="/login" element={<AuthPage mode="login"/>}/>
   <Route path="/register" element={<AuthPage mode="register"/>}/>
   <Route element={<AuthGuard/>}>
-   <Route element={<UserLayout dark={dark} onToggleTheme={()=>setDark(x=>!x)} onOpenSettings={()=>setSettingsOpen(true)}/>}>
+   <Route element={<UserLayout dark={dark} onToggleTheme={()=>setDark(x=>!x)} onOpenSettings={()=>setSettingsOpen(true)} settingsOpen={settingsOpen} onCloseSettings={()=>setSettingsOpen(false)}/>}>
     {navigation.map(item=>{const Page=pageRegistry[item.page];return Page?<Route key={item.id} path={item.path} element={<PageGuard><Suspense fallback={<p className="muted p-8">Sayfa yükleniyor...</p>}><Page/></Suspense></PageGuard>}/>:null})}
     <Route path="*" element={<Navigate to="/" replace/>}/>
    </Route>
   </Route>
- </Routes><MarginSettingsModal open={settingsOpen} onClose={()=>setSettingsOpen(false)}/></BrowserRouter></AuthProvider>;
+ </Routes></BrowserRouter></AuthProvider>;
 }

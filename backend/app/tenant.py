@@ -13,15 +13,21 @@ from .customers import Customer
 
 @event.listens_for(Session, "do_orm_execute")
 def scope_customer_reads(state):
-    if not state.is_select or not has_request_context():
+    if not has_request_context():
         return
     owner_id = getattr(g, "current_user_id", None)
     if owner_id is None:
         return
-    state.statement = state.statement.options(
-        with_loader_criteria(Customer, lambda cls: cls.owner_id == owner_id,
-                             include_aliases=True)
-    )
+    if state.is_select:
+        state.statement = state.statement.options(
+            with_loader_criteria(Customer, lambda cls: cls.owner_id == owner_id,
+                                 include_aliases=True)
+        )
+    elif state.is_update or state.is_delete:
+        # ORM bulk writes skip before_flush. Constrain them, too.
+        mapper = state.bind_arguments.get("mapper")
+        if mapper is not None and mapper.class_ is Customer:
+            state.statement = state.statement.where(Customer.owner_id == owner_id)
 
 
 @event.listens_for(Session, "before_flush")
