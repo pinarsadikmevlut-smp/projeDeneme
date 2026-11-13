@@ -91,6 +91,7 @@ def install_auth(app):
     @app.before_request
     def authenticate_request():
         g.current_user = None
+        g.current_user_id = None
         g.jwt_claims = None
         if not request.path.startswith("/api/") or request.path in PUBLIC:
             return None
@@ -122,7 +123,7 @@ def install_auth(app):
                 raise ValueError("invalid session")
         except (jwt.PyJWTError, ValueError, TypeError, OverflowError):
             return jsonify(error="unauthorized", message="Oturum geçersiz veya süresi dolmuş."), 401
-        g.current_user, g.jwt_claims = user, claims
+        g.current_user, g.current_user_id, g.jwt_claims = user, user_id, claims
         if not bearer and request.method not in {"GET", "HEAD", "OPTIONS"}:
             provided = request.headers.get("X-CSRF-Token", "")
             expected = claims.get("csrf", "")
@@ -148,8 +149,8 @@ def register():
     if missing:
         return missing
     data = credentials()
-    if not data or not 12 <= len(data[1]) <= 128:
-        return jsonify(error="invalid_credentials", message="Kullanıcı adı 3-40 karakter; şifre en az 12 karakter olmalı."), 400
+    if not data or not 12 <= len(data[1]) <= 128 or len(data[1].encode('utf-8')) > 72:
+        return jsonify(error="invalid_credentials", message="Kullanıcı adı 3-40 karakter; şifre 12-72 UTF-8 bayt olmalı."), 400
     username, password = data
     if db.session.scalar(db.select(User.id).where(User.username == username)):
         return jsonify(error="username_taken", message="Kullanıcı adı kullanımda."), 409

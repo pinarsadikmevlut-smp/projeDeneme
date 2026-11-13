@@ -15,10 +15,9 @@ from .customers import Customer
 def scope_customer_reads(state):
     if not state.is_select or not has_request_context():
         return
-    current = getattr(g, "current_user", None)
-    if current is None:
+    owner_id = getattr(g, "current_user_id", None)
+    if owner_id is None:
         return
-    owner_id = current.id
     state.statement = state.statement.options(
         with_loader_criteria(Customer, lambda cls: cls.owner_id == owner_id,
                              include_aliases=True)
@@ -29,7 +28,7 @@ def scope_customer_reads(state):
 def enforce_customer_ownership(session, flush_context, instances):
     if not has_request_context():
         return
-    current = getattr(g, "current_user", None)
+    owner_id = getattr(g, "current_user_id", None)
     for row in (*session.new, *session.dirty, *session.deleted):
-        if isinstance(row, Customer) and (current is None or row.owner_id != current.id):
+        if isinstance(row, Customer) and (owner_id is None or row.owner_id != owner_id):
             raise PermissionError("Customer ownership violation")

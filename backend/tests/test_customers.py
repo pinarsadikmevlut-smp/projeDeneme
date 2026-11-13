@@ -113,8 +113,8 @@ def test_crud_and_import_ownership(app_client):
 def test_bearer_auth_csrf_and_expired_token(app_client):
     app, client = app_client
     csrf, uid = register(client, "beareruser")
-    token = client.get_cookie("pinargold_access").value
-    client.delete_cookie("pinargold_access")
+    token = client.get_cookie("pinargold_access", path="/api").value
+    client.delete_cookie("pinargold_access", path="/api")
     assert client.get("/api/customers").status_code == 401
     header = {"Authorization": "Bearer " + token}
     assert client.get("/api/customers", headers=header).status_code == 200
