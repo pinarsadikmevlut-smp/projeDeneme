@@ -121,7 +121,10 @@ describe('Banka Hareketleri önizlemesi ve taslak aktarımı',()=>{
   const thirty=Array.from({length:30},(_,i)=>({...sampleRows[0],id:i+1,reference:'TEST-FAST-'+(i+1)}));
   loadZiraatFile.mockResolvedValueOnce({records:thirty,extraHeaders:[]});
   renderPage();
-  await importFile();
+  fireEvent.change(screen.getByLabelText('Banka ekstresi seç'),{
+   target:{files:[new File(['batch'],'ziraat.csv',{type:'text/csv'})]}
+  });
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Tüm filtrelenmişleri seç (30)'})).toBeTruthy());
   fireEvent.click(screen.getByRole('button',{name:'Tüm filtrelenmişleri seç (30)'}));
   expect(screen.getByText('30 hareket seçildi')).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:/Seçilileri Taslağa Aktar/}));
