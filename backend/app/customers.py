@@ -1,7 +1,7 @@
 """Local customer registry: authenticated API over the existing PostgreSQL database.
 
-This is a single-operator administration layer for development/small deployments,
-not a replacement for corporate SSO, MFA, or role-based access controls.
+User-scoped endpoints require JWT authentication; existing legacy customer rows
+are preserved separately and are never exposed to newly registered users.
 """
 import re
 from datetime import datetime, timezone
@@ -16,8 +16,6 @@ bp = Blueprint("customer_registry", __name__, url_prefix="/api")
 
 LETTERS = "A-Za-zÇĞİÖŞÜçğıöşü"
 FULL_NAME_RE = re.compile(r"^[" + LETTERS + r"]+(?:[ '\-][" + LETTERS + r"]+){1,7}$")
-FAILURES = {}
-FAILURES_LOCK = threading.Lock()
 
 
 class Customer(db.Model):
