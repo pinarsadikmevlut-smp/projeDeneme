@@ -87,3 +87,15 @@ describe('Excel işlem saati',()=>{
   expect(rows[1].date).toBe('12.11.2026');
  });
 });
+
+describe('VKN önizleme ayrıştırması',()=>{
+ it('extracts ten-digit VKN from both a named column and a labeled description',()=>{
+  const result=recordsFromMatrix([
+   ['Tarih','Açıklama','Vergi Kimlik Numarası','Tutar'],
+   ['13.11.2026','Kurum ödemesi','1234567890','250,00'],
+   ['13.11.2026','VKN: 9876543210 ödeme','','350,00']
+  ]);
+  expect(result.records[0].vkn).toBe('1234567890');
+  expect(result.records[1].vkn).toBe('9876543210');
+ });
+});

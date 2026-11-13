@@ -46,3 +46,18 @@ Ekstre yüklenince tüm gelen/giden işlemler orijinal işlem yönüyle listelen
 Gider Pusulası henüz resmî e-Belge değildir; `g-pusulasi` `documentType` değeri yalnızca korumalı PostgreSQL taslağında tutulur. Stopaj, tevkifat, KDV, hesap planı veya mali belge kuralları bu demo modülünde hesaplanmaz. Resmî GP veya fatura düzenlemeden önce yürürlükteki mevzuat ve profesyonel muhasebe onayı gereklidir.
 
 **Uyumluluk notu:** Veritabanındaki mevcut `document_type` alanı VARCHAR(12) olduğu için gider pusulası yalnızca iç kod `g-pusulasi` (10 karakter) olarak saklanır; arayüzde açık adı gösterilir. Böylece mevcut tabloların şeması bu değişiklikle değiştirilmez.
+
+## Güncel Banka Hareketleri → Toplu Taslak Aktarımı (13 Kasım 2026)
+
+- Banka menüsünde Ziraat `.xlsx`/`.csv` dosyasını seçin. Dosya en çok 10 MB'tır, ExcelJS tarayıcıda ayrıştırır, yükleme anında tabloya yansıtılır; banka dosyası tamamıyla sunucuya gönderilmez. `Excel Yükle` eski modülü korunur.
+- Sütun sırası: Seçim | Tarih/Saat | Banka/Yön | Ad Soyad/Açıklama | TCKN/VKN | İşlem Tutarı | Fatura Tipi | İşlem. TCKN/VKN listede maskeli; pozitif tutar yeşil, çıkış kırmızı. 25 kayıt/sayfa, arama, filtre, sıralama, toplu checkbox mevcuttur.
+- `GET /api/invoices/templates` kullanıcıya özel oturumda hazır şablon listesini döndürür: **Altın Satışı (e-Arşiv/e-Fatura), Sarrafiye Satışı, Hurda Alımı (gider pusulası), Gelen/Giden Diğer**. UI seçenekleri bu API'den okunur.
+- Tekil aktarım: Bir hareketin `Fatura Tipi` seçicisini doldurun → **↗ Hızlı taslak aktar**. 
+- Toplu aktarım: Tablodan satırları seçin → **Seçilileri Taslağa Aktar** → aranabilir modalda iş şablonunu seçip onaylayın. İstemci 25'lik gruplar halinde `POST /api/invoices/bank-import` çağırır. Gelen/giden yönü farklı olan hareketler seçili şablonla eşleşmiyorsa satır bazında `direction_mismatch` döner, yanlış tipte kayıt oluşturulmaz.
+- Önizlemede **Detay / Düzenle / Sil** işlemleri yalnızca tarayıcı belleğindeki bankayı etkiler; gerçek banka kayıtlarını veya PostgreSQL fatura taslaklarını silmez.
+- Server geçerli TCKN ile **yalnızca oturum sahibinin** `user_customers` tablosunu arar. Sahip olunan cari bulunursa taslağı `user_invoice_drafts` tablosunda oluşturur. Cari yoksa `customer_not_found` hatasıyla o satır atlanır; yeni müşteri veya kurum kaydı otomatik üretilmez. 10 haneli VKN destekli önizleme vardır, **kurumsal cari kaydı için henüz backend modeli yoktur**; bu kayıtlar açıklayıcı hata ile atlanır.
+- Banka tutarı, başlangıç taslak satırına **miktar tahmini yapılmadan** yazılır. Gramaj, milyem, ürün veya KDV otomatik tahmin edilmez. Oluşturulan satır `requiresReview` işaretlidir ve ürün/hizmet bilgisi Fatura Oluştur ekranında düzeltilene kadar **Kontrol Edildi / Hazırla** işlemi backend tarafından reddedilir.
+- Yeni `user_bank_draft_import_keys` tablosunda kullanıcı+işlem SHA-256 digest benzersizliği, aynı bankacılık hareketinin tekrar aktarılmasını engeller. Transaction referansı olmayan kayıtlar manuel düzeltme için atlanır. Kısmi aktarım başarı/hata sonuçları satır bazında ekranda görülür.
+- JWT/CSRF korumalı işlem; kullanıcı başka kişiye ait müşteri veya taslak üzerinden iş yapamaz. Sistem resmî fatura/gider pusulası üretmez, Mysoft/GİB'e göndermez.
+
+Örnek veriyle test edin; gerçek hesap hareketleri, TCKN ve VKN içeren dosyalar için KVKK yükümlülüklerini değerlendirin. Yeni import-key tablosu, Compose backend başlangıcındaki `flask --app app init-db` komutuyla eksikse oluşturulur; var olan tablolar ve Docker volume korunur.

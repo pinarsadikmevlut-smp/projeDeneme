@@ -98,3 +98,39 @@ def test_invoice_workflow_in_postgres():
         record = client.get(f"/api/invoices/{invoice_id}")
         assert record.status_code == 200
         assert record.json["invoice"]["status"] == "ready"
+
+def test_bank_draft_batch_persists_in_postgres_and_does_not_auto_issue():
+    from app.bank_import import BankImportKey
+    from app.invoices import InvoiceDraft
+    app = create_app({**CFG, "SQLALCHEMY_DATABASE_URI": os.environ["POSTGRES_INTEGRATION_URL"]})
+    with app.app_context():
+        db.create_all()
+    with app.test_client() as client:
+        signup = client.post("/api/auth/register", json={
+            "username": "cibankbatch", "password": "strong-postgres-bank-pwd-12345"})
+        assert signup.status_code == 201, signup.json
+        csrf = {"X-CSRF-Token": signup.json["csrfToken"]}
+        person = client.post("/api/customers", headers=csrf, json={
+            "fullName": "Deneme Musteri", "tckn": "10000000146"})
+        assert person.status_code == 201, person.json
+        sample = {"templateId": "altin_satis_arsiv", "records": [{
+            "rowId": 1, "reference": "CI-TEST-FAST-99",
+            "date": "13.11.2026 12:29", "direction": "in",
+            "amount": "1200.00", "tckn": "10000000146"}]}
+        created = client.post("/api/invoices/bank-import", headers=csrf, json=sample)
+        assert created.status_code == 200, created.json
+        assert created.json["created"] == 1
+        draft_id = created.json["results"][0]["invoiceId"]
+        assert client.post(f"/api/invoices/{draft_id}/review", headers=csrf).status_code == 409
+        repeated = client.post("/api/invoices/bank-import", headers=csrf, json=sample)
+        assert repeated.json["created"] == 0
+        assert repeated.json["results"][0]["reason"] == "already_imported"
+    fresh = create_app({**CFG, "SQLALCHEMY_DATABASE_URI": os.environ["POSTGRES_INTEGRATION_URL"]})
+    with fresh.test_client() as client:
+        auth = client.post("/api/auth/login", json={
+            "username": "cibankbatch", "password": "strong-postgres-bank-pwd-12345"})
+        assert auth.status_code == 200
+        draft = client.get(f"/api/invoices/{draft_id}")
+        assert draft.status_code == 200
+        assert draft.json["invoice"]["status"] == "draft"
+        assert draft.json["invoice"]["lines"][0]["requiresReview"] is True

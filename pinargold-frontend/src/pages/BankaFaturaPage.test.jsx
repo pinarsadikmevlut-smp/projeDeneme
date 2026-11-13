@@ -105,7 +105,7 @@ describe('Banka Hareketleri önizlemesi ve taslak aktarımı',()=>{
   fireEvent.change(screen.getByLabelText('Şablon ara'),{target:{value:'altın'}});
   expect(screen.getAllByText('Altın Satışı').length).toBeGreaterThan(0);
   expect(screen.queryByText('Hurda Alımı')).toBeNull();
-  fireEvent.click(screen.getByRole('radio',{name:/Altın Satışı/}));
+  fireEvent.click(screen.getAllByRole('radio',{name:/Altın Satışı/})[0]);
   expect(screen.getByText(/1 hareketin yönüyle uyumlu değil/)).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:'1 hareketi taslağa aktar'}));
   await waitFor(()=>expect(apiRequest).toHaveBeenCalledWith('/invoices/bank-import',expect.objectContaining({

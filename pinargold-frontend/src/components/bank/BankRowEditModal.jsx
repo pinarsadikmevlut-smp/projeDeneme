@@ -12,7 +12,7 @@ export default function BankRowEditModal({row,onClose,onSave}){
    setError('İşlem referansı zorunludur (en fazla 80 karakter).');return;
   }
   const amount=Number(form.amount);
-  if(!Number.isFinite(amount)||amount<=0||amount>100000000||Math.round(amount*100)!==amount*100){
+  if(!Number.isFinite(amount)||amount<=0||amount>100000000||Math.abs(Math.round(amount*100)-amount*100)>1e-6){
    setError('Geçerli ve pozitif bir işlem tutarı girin.');return;
   }
   if(form.tckn&&!/^\d{11}$/.test(form.tckn)){
