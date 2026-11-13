@@ -6,7 +6,7 @@ import './InvoiceWorkflow.css';
 export const BANK_DOCUMENT_TEMPLATES=[
  {value:'e-arsiv',label:'Fatura · e-Arşiv',short:'Fatura',icon:'ϟ',tone:'invoice'},
  {value:'e-fatura',label:'Fatura · e-Fatura',short:'Fatura',icon:'ϟ',tone:'invoice'},
- {value:'gider-pusulasi',label:'G.P. · Gider Pusulası',short:'G.P.',icon:'▣',tone:'voucher'}
+ {value:'g-pusulasi',label:'G.P. · Gider Pusulası',short:'G.P.',icon:'▣',tone:'voucher'}
 ];
 const trMoney=value=>Number(value||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';
 const norm=value=>String(value??'').toLocaleLowerCase('tr-TR').replace(/\s+/g,' ').trim();

@@ -58,14 +58,14 @@ describe('Banka → Belge düzeni',()=>{
  it('requires a template selection and carries the chosen G.P. into the draft flow',async()=>{
   renderPage();await importFile();
   fireEvent.change(screen.getByLabelText('Belge şablonu 2'),{
-   target:{value:'gider-pusulasi'}
+   target:{value:'g-pusulasi'}
   });
   expect(screen.getByRole('button',{name:'Belge sürecine ilerle 2'}).disabled).toBe(false);
   fireEvent.click(screen.getByRole('button',{name:'Belge sürecine ilerle 2'}));
   const data=JSON.parse(screen.getByTestId('draft-navigation').textContent);
   expect(data).toMatchObject({
    reference:'TEST-EFT-2',direction:'out',amount:481100,
-   documentType:'gider-pusulasi',bankName:'Ziraat Bankası'
+   documentType:'g-pusulasi',bankName:'Ziraat Bankası'
   });
   expect(data.tckn).toBeUndefined();
   expect(data.description).toBeUndefined();

@@ -78,7 +78,7 @@ export default function FaturaOlusturPage(){
  };
  return <div className="inv-page">
   <header className="inv-head">
-   <div><div className="inv-overline">PINARGOLD · SATIŞTAN BELGEYE</div><h1>{editId?'Taslağı düzenle':'Yeni fatura taslağı'}</h1>
+   <div><div className="inv-overline">PINARGOLD · SATIŞTAN BELGEYE</div><h1>{editId?'Taslağı düzenle':documentType==='g-pusulasi'?'Yeni gider pusulası taslağı':'Yeni fatura taslağı'}</h1>
     <p>Müşteri, altın gramajı ve işçilik bilgisini tek akışta hazırlayın.</p></div>
    <Link to="/taslak-faturalar" className="inv-link">← Taslak listesi</Link>
   </header>
@@ -103,7 +103,7 @@ export default function FaturaOlusturPage(){
         <select value={documentType} onChange={e=>setDocumentType(e.target.value)}>
          <option value="e-arsiv">e-Arşiv taslağı</option>
          <option value="e-fatura">e-Fatura taslağı</option>
-         <option value="gider-pusulasi">G.P. · Gider Pusulası taslağı</option>
+         <option value="g-pusulasi">G.P. · Gider Pusulası taslağı</option>
         </select>
        </label>
        <label className="inv-field">Ödeme yöntemi

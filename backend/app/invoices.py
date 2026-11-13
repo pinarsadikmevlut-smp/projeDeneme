@@ -12,7 +12,7 @@ from .customers import Customer
 
 bp = Blueprint("invoice_workflow", __name__, url_prefix="/api/invoices")
 MONEY = Decimal("0.01")
-ALLOWED_DOCS = {"e-fatura", "e-arsiv", "gider-pusulasi"}
+ALLOWED_DOCS = {"e-fatura", "e-arsiv", "g-pusulasi"}
 ALLOWED_PAYMENTS = {"Nakit", "Kredi Kartı", "Havale / EFT"}
 ALLOWED_UNITS = {"gram", "adet"}
 ALLOWED_KARATS = {"8", "14", "18", "21", "22", "24", "ziynet", "diger"}
