@@ -19,13 +19,14 @@ const fromBank=bank=>{
 export default function FaturaOlusturPage(){
  const location=useLocation(),navigate=useNavigate(),[params]=useSearchParams();
  const bank=location.state?.bank||null;
+ const salesLines=location.state?.salesLines||null;
  const editId=params.get('id');
  const [customers,setCustomers]=useState([]);
  const [customerId,setCustomerId]=useState(bank?.customerId||'');
  const [documentType,setDocumentType]=useState('e-arsiv');
  const [paymentMethod,setPaymentMethod]=useState(bank?'Havale / EFT':'Nakit');
  const [notes,setNotes]=useState('');
- const [lines,setLines]=useState([fromBank(bank)]);
+ const [lines,setLines]=useState(salesLines?.length?salesLines.map((row,i)=>({...row,key:'cart-'+i})): [fromBank(bank)]);
  const [bankReference,setBankReference]=useState(bank?.reference||'');
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -82,6 +83,7 @@ export default function FaturaOlusturPage(){
    <Link to="/taslak-faturalar" className="inv-link">← Taslak listesi</Link>
   </header>
   <div className="inv-alert" role="note"><strong>DEMO / ÖN BELGE</strong> — Buradaki toplamlar vergi hariç ticari taslak hesaplamalarıdır. KDV, özel matrah, GİB belge numarası ve resmî iletim hesaplanmaz.</div>
+  {salesLines?.length>0&&<div className="inv-banner">◎ Satış sepetinden {salesLines.length} ürün getirildi. Gramaj ve ayar varsayımlarını belgeye kaydetmeden önce doğrulayın. Sepet fiyatları gerçek fatura tutarını garanti etmez.</div>}
   {bank&&<div className="inv-banner">↗ Bankadan taslağa: <strong>{bank.reference||'Referans yok'}</strong> · {fmt(bank.amount)} · Ürün cinsi ve müşteri eşleşmesini doğrulamadan kaydetmeyin.</div>}
   {error&&<p className="inv-error" role="alert">{error}</p>}
   {loading?<p className="inv-loading">Kayıtlar yükleniyor...</p>:
