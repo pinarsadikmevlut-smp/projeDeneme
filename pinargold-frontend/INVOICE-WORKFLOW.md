@@ -39,3 +39,10 @@ Mevcut Docker PostgreSQL birimine yeni `user_invoice_drafts` tablosu `flask --ap
 Uygulama: `docker compose up -d --build`, `JWT_SECRET_KEY` zorunludur.
 `db.create_all()` ileride şema değişiklikleri için migrasyon aracı değildir: Alembic gerekecektir.
 Üretim öncesi RLS, kaynak bazlı hız sınırlama, rol/işletme tanımları, vergi hesaplama testleri, stok/ödeme entegrasyonları ve Mysoft sandbox anahtarları ile gerçek entegrasyon değerlendirilmelidir.
+
+## Banka hareketlerinde belge şablonu seçimi
+Ekstre yüklenince tüm gelen/giden işlemler orijinal işlem yönüyle listelenir: seçim kutusu, tarih/saat, kaynak banka/yön, karşı taraf/açıklama, renkli tutar, **BELGE**, işlem. Belge alanında üç taslak şablonu bulunur: **Fatura · e-Arşiv**, **Fatura · e-Fatura**, **G.P. · Gider Pusulası**. Satırdaki **İlerle** düğmesi ancak belge türü seçildikten sonra açılır. Seçimle yalnızca belge tipi, banka işlem numarası, yön ve tutar fatura/gider pusulası *taslak* formuna taşınır; bankadaki TCKN ve tüm açıklama otomatik olarak backend'e gönderilmez. Taslak formunda cari, ürün ve tutarlar doğrulanmadan kayıt yapılamaz. Seçim kutuları/toplu şablon uygulaması, gelen-giden filtreleri, tarih aralığı, arama ve satır detayları sağlanır. 
+
+Gider Pusulası henüz resmî e-Belge değildir; `g-pusulasi` `documentType` değeri yalnızca korumalı PostgreSQL taslağında tutulur. Stopaj, tevkifat, KDV, hesap planı veya mali belge kuralları bu demo modülünde hesaplanmaz. Resmî GP veya fatura düzenlemeden önce yürürlükteki mevzuat ve profesyonel muhasebe onayı gereklidir.
+
+**Uyumluluk notu:** Veritabanındaki mevcut `document_type` alanı VARCHAR(12) olduğu için gider pusulası yalnızca iç kod `g-pusulasi` (10 karakter) olarak saklanır; arayüzde açık adı gösterilir. Böylece mevcut tabloların şeması bu değişiklikle değiştirilmez.

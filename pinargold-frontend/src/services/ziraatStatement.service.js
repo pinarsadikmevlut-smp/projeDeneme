@@ -47,10 +47,14 @@ export function parseMoney(value){
 }
 function excelDate(value){
  if(value instanceof Date&&!Number.isNaN(+value)){
-  return [String(value.getUTCDate()).padStart(2,'0'),String(value.getUTCMonth()+1).padStart(2,'0'),value.getUTCFullYear()].join('.');
+  const display=[String(value.getUTCDate()).padStart(2,'0'),String(value.getUTCMonth()+1).padStart(2,'0'),value.getUTCFullYear()].join('.');
+  const hh=String(value.getUTCHours()).padStart(2,'0');
+  const mm=String(value.getUTCMinutes()).padStart(2,'0');
+  // Preserve time only when present in Excel; a date-only cell stays unchanged.
+  return value.getUTCHours()||value.getUTCMinutes()?display+' '+hh+':'+mm:display;
  }
  if(typeof value==='number'&&value>20000&&value<100000){
-  const date=new Date(Date.UTC(1899,11,30)+Math.floor(value)*86400000);
+  const date=new Date(Date.UTC(1899,11,30)+Math.round(value*86400000));
   return excelDate(date);
  }
  return normText(value);
