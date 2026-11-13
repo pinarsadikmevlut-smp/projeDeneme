@@ -85,3 +85,19 @@ describe('Taslak kontrol ve Mysoft kuyruğu',()=>{
   expect(apiRequest.mock.calls.every(call=>call[0].startsWith('/invoices'))).toBe(true);
  });
 });
+
+describe('Banka belge şablonu aktarımı',()=>{
+ it('prefills G.P. from the selected outgoing bank transaction and keeps required product review',async()=>{
+  apiRequest.mockResolvedValue({customers:[customer]});
+  renderBuilder([{pathname:'/fatura-olustur',state:{bank:{
+   reference:'GP-DEMO-01',amount:1500,direction:'out',documentType:'g-pusulasi'
+  }}}]);
+  expect(await screen.findByText('Örnek Müşteri')).toBeTruthy();
+  expect(screen.getByRole('heading',{name:'Yeni gider pusulası taslağı'})).toBeTruthy();
+  expect(screen.getByLabelText('Belge tipi').value).toBe('g-pusulasi');
+  fireEvent.change(screen.getByLabelText('Müşteri / Cari'),{target:{value:'7'}});
+  fireEvent.click(screen.getByRole('button',{name:/Taslağı PostgreSQL’e kaydet/}));
+  expect(screen.getByRole('alert').textContent).toContain('Ürün adını doğrulayarak değiştirin');
+  expect(apiRequest).not.toHaveBeenCalledWith('/invoices',expect.anything());
+ });
+});

@@ -73,6 +73,18 @@ def test_invoice_workflow_in_postgres():
         invoice_id = draft.json["invoice"]["id"]
         assert draft.json["invoice"]["total"] == "13200.00"
         assert client.post(f"/api/invoices/{invoice_id}/review", headers=csrf).status_code == 200
+        gp = client.post("/api/invoices", headers=csrf, json={
+            "customerId": customer.json["customer"]["id"],
+            "documentType": "g-pusulasi", "paymentMethod": "Havale / EFT",
+            "bankReference": "GP-DEMO-01",
+            "lines": [{"name": "Demo belge kalemi", "karat": "diger", "fineness": "1",
+                        "unit": "adet", "weightGram": "0", "quantity": 1,
+                        "unitPrice": "1000.00", "workmanship": "0"}]
+        })
+        assert gp.status_code == 201, gp.json
+        gp_id = gp.json["invoice"]["id"]
+        assert gp.json["invoice"]["documentType"] == "g-pusulasi"
+
     next_app = create_app({
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": os.environ["POSTGRES_INTEGRATION_URL"],

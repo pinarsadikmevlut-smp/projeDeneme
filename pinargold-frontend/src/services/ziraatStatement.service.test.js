@@ -75,3 +75,15 @@ describe('Ziraat Excel / CSV statement import',()=>{
   expect(()=>recordsFromMatrix([['Rapor Başlığı'],['01.11.2026','1.000']])).toThrow(/sütun başlıkları/i);
  });
 });
+
+describe('Excel işlem saati',()=>{
+ it('preserves time from Excel Date values without changing date-only values',()=>{
+  const rows=recordsFromMatrix([
+   ['Muh Tarih','İşlem Açıklaması','Alacak'],
+   [new Date(Date.UTC(2026,10,13,12,29)),'TEST FAST GELEN',500],
+   [new Date(Date.UTC(2026,10,12)),'TEST GELEN',200]
+  ]).records;
+  expect(rows[0].date).toBe('13.11.2026 12:29');
+  expect(rows[1].date).toBe('12.11.2026');
+ });
+});

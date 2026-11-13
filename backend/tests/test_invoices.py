@@ -178,3 +178,21 @@ def test_bulk_invoice_mutation_cannot_access_other_owner(clients):
     with app.app_context():
         assert db.session.get(InvoiceDraft, own).status == "draft"
         assert db.session.get(InvoiceDraft, other).status == "draft"
+
+def test_expense_voucher_template_is_draft_only(clients):
+    app, client = clients
+    owner, csrf = register(client, "gptestowner")
+    customer = add_customer(client, csrf)
+    response = client.post("/api/invoices", headers=csrf,
+                           json=payload(customer, documentType="g-pusulasi"))
+    assert response.status_code == 201, response.json
+    draft = response.json["invoice"]
+    assert draft["documentType"] == "g-pusulasi"
+    assert draft["status"] == "draft"
+    assert draft["transmitted"] is False
+    assert draft["officialDocument"] is False
+    assert draft["reference"].startswith("PG-TAS-")
+    with app.app_context():
+        saved = db.session.get(InvoiceDraft, draft["id"])
+        assert saved.document_type == "g-pusulasi"
+        assert saved.owner_id == owner
