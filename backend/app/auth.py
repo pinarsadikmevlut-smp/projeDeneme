@@ -163,6 +163,8 @@ def register():
     except IntegrityError:
         db.session.rollback()
         return jsonify(error="username_taken", message="Kullanıcı adı kullanımda."), 409
+    with FAILURES_LOCK:
+        FAILURES.setdefault("register:" + ip, []).append(time.monotonic())
     token, csrf = issue_token(user)
     return attach_cookie(jsonify(session_payload(user, csrf)), token), 201
 
@@ -181,7 +183,7 @@ def login():
     user = db.session.scalar(db.select(User).where(User.username == data[0])) if data else None
     supplied = (data[1].encode("utf-8") if data else b"")
     encoded = user.password_hash.encode("ascii") if user else DUMMY_HASH
-    valid = len(supplied) <= 256 and bcrypt.checkpw(supplied, encoded)
+    valid = len(supplied) <= 72 and bcrypt.checkpw(supplied, encoded)
     if not user or not user.active or not valid:
         rate_limit(ip)
         return jsonify(error="invalid_credentials", message="Kullanıcı adı veya şifre hatalı."), 401

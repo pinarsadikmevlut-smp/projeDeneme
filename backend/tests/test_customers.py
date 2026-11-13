@@ -154,3 +154,22 @@ def test_missing_configuration_fail_closed():
     with app.test_client() as client:
         assert client.get("/api/customers").status_code == 503
         assert client.post("/api/auth/login", json={}).status_code == 503
+
+
+def test_orm_bulk_write_is_scoped(app_client):
+    from flask import g
+    app, client = app_client
+    csrf1, id1 = register(client, 'scopeone')
+    first = client.post('/api/customers', headers=csrf1, json={
+        'fullName': 'Ayşe Kaya', 'tckn': TCKN1}).json['customer']['id']
+    csrf2, id2 = register(client, 'scopetwo')
+    other = client.post('/api/customers', headers=csrf2, json={
+        'fullName': 'Ali Can', 'tckn': TCKN1}).json['customer']['id']
+    with app.test_request_context('/api/customers'):
+        g.current_user_id = id1
+        result = db.session.execute(db.update(Customer).where(Customer.id == other).values(full_name='Yanlış Değişiklik'))
+        db.session.commit()
+        assert result.rowcount == 0
+    with app.app_context():
+        assert db.session.get(Customer, first).full_name == 'Ayşe Kaya'
+        assert db.session.get(Customer, other).full_name == 'Ali Can'

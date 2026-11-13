@@ -39,12 +39,10 @@ export function AuthProvider({children}){
   return apply(result);
  },[apply]);
  const logout=useCallback(async()=>{
-  try{
-   await apiRequest('/auth/logout',{method:'POST'});
-  }finally{
-   clearAuthState();
-   setAuth(anonymous);
-  }
+  // Avoid clearing the visible session if the server could not revoke the cookie.
+  await apiRequest('/auth/logout',{method:'POST'});
+  clearAuthState();
+  setAuth(anonymous);
  },[]);
  const value=useMemo(()=>({...auth,refresh,login,register,logout}),[auth,refresh,login,register,logout]);
  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

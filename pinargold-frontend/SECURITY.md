@@ -1,3 +1,7 @@
+# Güncel güvenlik
+
+JWT + BCrypt + HttpOnly Cookie + CSRF ve kullanıcı bazlı veri kapsamı için [AUTH.md](./AUTH.md) dosyasını inceleyin. Aşağıdaki açıklamalar eski güvenlik temeline aittir.
+
 # Security foundation (not production-ready)
 
 - Session endpoint returns anonymous until an authentication provider and RBAC are implemented. Auth Context is UI state only, never authorization.

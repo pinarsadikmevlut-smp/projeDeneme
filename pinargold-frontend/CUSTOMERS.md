@@ -1,3 +1,7 @@
+> **Güncel JWT branch:** Tüm uygulama AuthGuard arkasındadır. Yeni kullanıcılar `/register` sayfasından hesap açar. Kişisel müşteri verileri `user_customers.owner_id` ile ayrılır. Aşağıda tarif edilen girişsiz demo önceki sürüme aittir; güncel kılavuz [AUTH.md](./AUTH.md). Eski `customers` tablosuna müdahale edilmemiştir.
+
+---
+
 ## Girişsiz demo modu (güncel)
 
 **Müşteri Listesi menüsü artık doğrudan açılır.** Backend oturumu yoksa tamamen
