@@ -3,7 +3,7 @@ import pytest
 from flask import g
 
 from app import AuditEvent, create_app, db
-from app.auth import User
+from app.auth import User, FAILURES, FAILURES_LOCK
 from app.customers import Customer
 from app.invoices import InvoiceDraft
 
@@ -18,6 +18,9 @@ TCKN = "10000000146"
 
 @pytest.fixture()
 def clients():
+    # Reset the in-process auth throttle between independent isolated test cases.
+    with FAILURES_LOCK:
+        FAILURES.clear()
     app = create_app(CONFIG)
     with app.app_context():
         db.create_all()
